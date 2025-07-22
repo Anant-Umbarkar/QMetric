@@ -126,7 +126,7 @@ const Navbar = () => {
 
     const data = await response.json();
 
-      sessionStorage.setItem('accessToken', 'mock-token');
+      sessionStorage.setItem('accessToken', data.accessToken);
       sessionStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
       setIsLoginModalOpen(false);
