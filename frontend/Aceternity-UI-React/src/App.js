@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import LandingPage from "./components/pages/LandingPage";
 import Components from "./components/Components";
@@ -8,20 +8,22 @@ import ScrollToTop from './ScrollToTop';
 import ResultPage from "./components/pages/ResultPage";
 import "./App.css";
 import "animate.css";
+import UserDashboard from "./components/pages/UserDashboard";
 
 function App() {
   return (
-    <div className="bg-black min-h-screen text-white">
-      <Navbar />
-      <ScrollToTop/>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/upload" element={< UploadPage/>} />
-        <Route path="/components" element={<Components />} />
-        <Route path="/result" element={<ResultPage/>} />
-      </Routes>
-      <Footer/>
-    </div>
+      <div className="bg-black min-h-screen text-white">
+        <Navbar />
+        <ScrollToTop />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/components" element={<Components />} />
+          <Route path="/result" element={<ResultPage />} />
+          <Route path="/dashboard" element={<UserDashboard />} />
+        </Routes>
+        <Footer />
+      </div>
   );
 }
 

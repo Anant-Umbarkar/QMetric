@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, Upload, FileText, Plus, Check, Target, BookOpen, Loader2, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const UploadPage = () => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const UploadPage = () => {
   const [dragOver, setDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   // Validation function
   const validateForm = () => {
@@ -81,7 +83,7 @@ const UploadPage = () => {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(''); // Clear error when user makes changes
+    setError('');
   };
 
   const handleAddCO = () => {
@@ -96,14 +98,14 @@ const UploadPage = () => {
     const updatedCOs = [...courseOutcomes];
     updatedCOs[index][field] = value;
     setCourseOutcomes(updatedCOs);
-    setError(''); // Clear error when user makes changes
+    setError('');
   };
 
   const handleModuleChange = (index, field, value) => {
     const updatedModules = [...modules];
     updatedModules[index][field] = value;
     setModules(updatedModules);
-    setError(''); // Clear error when user makes changes
+    setError('');
   };
 
   const handleDragOver = (e) => {
@@ -133,7 +135,6 @@ const UploadPage = () => {
     const allowedTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
       'application/vnd.ms-excel', // .xls
-      'application/pdf'
     ];
     return allowedTypes.includes(file.type);
   };
@@ -146,12 +147,12 @@ const UploadPage = () => {
         setError('');
       } else {
         setError('Please upload a valid Excel (.xlsx, .xls) or PDF file');
-        e.target.value = ''; // Reset file input
+        e.target.value = '';
       }
     }
   };
 
- const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (!file) {
       setError("Please upload a file (Excel or PDF)!");
       return;
@@ -163,7 +164,7 @@ const UploadPage = () => {
 
     setIsUploading(true);
     setError('');
-    
+
     // Transform course outcomes and modules into backend's expected format
     const transformedSequence = [
       // Add course outcomes with backend structure
@@ -180,7 +181,7 @@ const UploadPage = () => {
         hours: parseFloat(module.hours) // Convert to number
       }))
     ];
-    
+
     // Prepare form data to send to the backend
     const formDataToSend = new FormData();
     formDataToSend.append("file", file);
@@ -188,15 +189,15 @@ const UploadPage = () => {
     formDataToSend.append("Sequence", JSON.stringify(transformedSequence)); // Backend expects Sequence
 
     try {
-      const token = sessionStorage.getItem('accessToken')
-      
+      const token = sessionStorage.getItem('accessToken');
+      console.log('Token:', token);
+
       const API_BASE_URL = 'http://localhost:80'; 
       const headers = {};
-      console.log(token)
+      
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
 
       const response = await fetch(`${API_BASE_URL}/upload/totext`, {
         method: 'POST',
@@ -206,31 +207,68 @@ const UploadPage = () => {
 
       // Check if response is ok first
       if (response.ok) {
-        // Try to parse as JSON, but handle cases where it might not be JSON
-        let data;
+        let responseData;
+        let resultId;
+
         try {
-          const text = await response.text();
-          data = text ? JSON.parse(text) : {};
+          responseData = await response.json();
+          console.log('Full response:', responseData);
+
+          // Extract the ID from response - adjust based on your backend's response structure
+          if (typeof responseData === 'string') {
+            // If response is directly the ID as string
+            resultId = responseData._id;
+          } else if (responseData.id) {
+            // If response has an id field
+            resultId = responseData._id;
+          } else if (responseData.result_id) {
+            // If response has a result_id field
+            resultId = responseData.result_id;
+          } else if (responseData.data && responseData.data.id) {
+            // If response has nested id
+            resultId = responseData.data.id;
+          } else {
+            // If response is an object, you might need to extract differently
+            console.warn('Could not extract ID from response:', responseData);
+            resultId = responseData; // fallback
+          }
+
+          console.log('Extracted ID:', resultId);
+
+          if (resultId) {
+            // Navigate to result page with the data passed as state
+            navigate(`/result`, { 
+              state: { 
+                authToken: token,
+                fromUpload: true 
+              } 
+            });
+            
+            // Success message
+            alert('File uploaded and processed successfully!');
+
+            // Reset form on success
+            setFile(null);
+            setCourseOutcomes([]);
+            setModules([]);
+            setFormData({
+              "College Name": "",
+              "Branch": "",
+              "Year Of Study": "",
+              "Semester": "",
+              "Course Name": "",
+              "Course Code": "",
+              "Course Teacher": ""
+            });
+          } else {
+            throw new Error('No result ID received from server');
+          }
+
         } catch (jsonError) {
-          console.warn('Response is not valid JSON, treating as success');
-          data = { message: 'Upload successful' };
+          console.error('Error parsing response:', jsonError);
+          setError('Invalid response from server. Please try again.');
         }
-        
-        console.log('Data submitted successfully:', data);
-        alert('File uploaded and processed successfully!');
-        // Reset form on success
-        setFile(null);
-        setCourseOutcomes([]);
-        setModules([]);
-        setFormData({
-          "College Name": "",
-          "Branch": "",
-          "Year Of Study": "",
-          "Semester": "",
-          "Course Name": "",
-          "Course Code": "",
-          "Course Teacher": ""
-        });
+
       } else {
         // Handle error responses
         let errorMessage;
@@ -251,9 +289,9 @@ const UploadPage = () => {
         } catch (textError) {
           errorMessage = `Server error: ${response.status} ${response.statusText}`;
         }
-        
+
         console.error('Upload failed:', errorMessage);
-        
+
         // Provide more specific error messages
         if (response.status === 403) {
           setError('Access denied. Please check your authentication token or login again.');
@@ -310,47 +348,45 @@ const UploadPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-              <Upload className="text-white" size={20} />
+            <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+              <Upload className="text-white" size={16} />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-semibold text-gray-900">
               Upload Paper and Details
             </h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start space-x-3">
-            <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
+            <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
             <div>
-              <h3 className="font-semibold text-red-800">Error</h3>
+              <h3 className="font-medium text-red-800">Error</h3>
               <p className="text-red-700 text-sm">{error}</p>
             </div>
           </div>
         )}
 
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Course Information Section */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">1</span>
-              </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+              <span className="w-6 h-6 bg-gray-900 text-white text-xs rounded flex items-center justify-center">1</span>
               <span>Course Information</span>
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.keys(formData).map((key) => (
-                <div key={key} className="group">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <div key={key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     {key}
                     {["College Name", "Branch", "Course Name", "Course Code"].includes(key) && (
                       <span className="text-red-500 ml-1">*</span>
@@ -361,7 +397,7 @@ const UploadPage = () => {
                     name={key}
                     value={formData[key]}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:shadow-md text-gray-900 placeholder-gray-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                     placeholder={`Enter ${key.toLowerCase()}`}
                   />
                 </div>
@@ -370,95 +406,90 @@ const UploadPage = () => {
           </div>
 
           {/* Course Outcomes Section */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                  <Target className="text-white" size={16} />
-                </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <Target className="text-gray-700" size={18} />
                 <span>Course Outcomes</span>
               </h2>
               <div className="flex items-center space-x-4">
                 {courseOutcomes.length > 0 && (
                   <div className="text-sm">
                     <span className={`font-medium ${Math.abs(getCurrentWeightSum() - 100) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
-                      Total Weight: {getCurrentWeightSum().toFixed(1)}%
+                      Total: {getCurrentWeightSum().toFixed(1)}%
                     </span>
                   </div>
                 )}
                 <button
                   type="button"
                   onClick={handleAddCO}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                  className="flex items-center space-x-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800"
                 >
-                  <Plus size={16} />
+                  <Plus size={14} />
                   <span>Add CO</span>
                 </button>
               </div>
             </div>
 
             {courseOutcomes.length === 0 ? (
-              <div className="text-center py-12 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border-2 border-dashed border-purple-200">
-                <Target className="text-purple-300 mx-auto mb-4" size={48} />
-                <p className="text-gray-600 text-lg">No course outcomes added yet</p>
-                <p className="text-gray-500 text-sm mt-2">Click "Add CO" to define your course outcomes</p>
+              <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <Target className="text-gray-400 mx-auto mb-3" size={32} />
+                <p className="text-gray-600">No course outcomes added yet</p>
+                <p className="text-gray-500 text-sm mt-1">Click "Add CO" to define your course outcomes</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 {courseOutcomes.map((co, index) => (
-                  <div key={index} className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200 hover:shadow-md transition-shadow duration-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white font-bold text-sm">CO{index + 1}</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">Course Outcome {index + 1}</span>
+                  <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-6 h-6 bg-gray-700 text-white text-xs rounded flex items-center justify-center">
+                          CO{index + 1}
+                        </span>
+                        <span className="font-medium text-gray-900">Course Outcome {index + 1}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => deleteCO(index)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors duration-200"
-                        title="Delete CO"
+                        className="text-gray-500 hover:text-red-600 p-1"
                       >
                         <Trash2 size={16} />
                       </button>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Weight (%) <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="number"
-                            placeholder="0-100"
-                            value={co.weight}
-                            onChange={(e) => handleCOChange(index, 'weight', e.target.value)}
-                            className="w-full px-4 py-3 bg-white border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Bloom's Level <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            value={co.blooms}
-                            onChange={(e) => handleCOChange(index, 'blooms', e.target.value)}
-                            className="w-full px-4 py-3 bg-white border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900"
-                          >
-                            <option value="">Select Level</option>
-                            <option value="Remember">Remember</option>
-                            <option value="Understand">Understand</option>
-                            <option value="Apply">Apply</option>
-                            <option value="Analyze">Analyze</option>
-                            <option value="Evaluate">Evaluate</option>
-                            <option value="Create">Create</option>
-                          </select>
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Weight (%) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0-100"
+                          value={co.weight}
+                          onChange={(e) => handleCOChange(index, 'weight', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bloom's Level <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={co.blooms}
+                          onChange={(e) => handleCOChange(index, 'blooms', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                        >
+                          <option value="">Select Level</option>
+                          <option value="Remember">Remember</option>
+                          <option value="Understand">Understand</option>
+                          <option value="Apply">Apply</option>
+                          <option value="Analyze">Analyze</option>
+                          <option value="Evaluate">Evaluate</option>
+                          <option value="Create">Create</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -468,46 +499,43 @@ const UploadPage = () => {
           </div>
 
           {/* Modules Section */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-                  <BookOpen className="text-white" size={16} />
-                </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <BookOpen className="text-gray-700" size={18} />
                 <span>Course Modules</span>
               </h2>
               <button
                 type="button"
                 onClick={handleAddModule}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                className="flex items-center space-x-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800"
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 <span>Add Module</span>
               </button>
             </div>
 
             {modules.length === 0 ? (
-              <div className="text-center py-12 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-dashed border-green-200">
-                <BookOpen className="text-green-300 mx-auto mb-4" size={48} />
-                <p className="text-gray-600 text-lg">No modules added yet</p>
-                <p className="text-gray-500 text-sm mt-2">Click "Add Module" to structure your course content</p>
+              <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <BookOpen className="text-gray-400 mx-auto mb-3" size={32} />
+                <p className="text-gray-600">No modules added yet</p>
+                <p className="text-gray-500 text-sm mt-1">Click "Add Module" to structure your course content</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {modules.map((module, index) => (
-                  <div key={index} className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200 hover:shadow-md transition-shadow duration-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-                          <span className="text-white font-bold text-sm">M{index + 1}</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">Module {index + 1}</span>
+                  <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-6 h-6 bg-gray-700 text-white text-xs rounded flex items-center justify-center">
+                          M{index + 1}
+                        </span>
+                        <span className="font-medium text-gray-900">Module {index + 1}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => deleteModule(index)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors duration-200"
-                        title="Delete Module"
+                        className="text-gray-500 hover:text-red-600 p-1"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -515,7 +543,7 @@ const UploadPage = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
                           Module Name <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -523,11 +551,11 @@ const UploadPage = () => {
                           placeholder="Enter module name or topic..."
                           value={module.name}
                           onChange={(e) => handleModuleChange(index, 'name', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
                           Teaching Hours <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -535,7 +563,7 @@ const UploadPage = () => {
                           placeholder="Hours"
                           value={module.hours}
                           onChange={(e) => handleModuleChange(index, 'hours', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
                           min="0"
                           step="0.5"
                         />
@@ -548,28 +576,26 @@ const UploadPage = () => {
           </div>
 
           {/* File Upload Section */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                  <Upload className="text-white" size={16} />
-                </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <Upload className="text-gray-700" size={18} />
                 <span>Upload Paper File</span>
               </h2>
               <button
                 type="button"
                 onClick={downloadSample}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                className="flex items-center space-x-2 px-3 py-1.5 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700"
               >
-                <FileText size={16} />
+                <FileText size={14} />
                 <span>Download Sample</span>
               </button>
             </div>
 
             <div
-              className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                 dragOver 
-                  ? 'border-blue-500 bg-blue-50' 
+                  ? 'border-gray-500 bg-gray-100' 
                   : file 
                     ? 'border-green-500 bg-green-50' 
                     : 'border-gray-300 hover:border-gray-400'
@@ -579,44 +605,40 @@ const UploadPage = () => {
               onDrop={handleDrop}
             >
               {file ? (
-                <div className="space-y-4">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                    <FileText className="text-green-600" size={32} />
-                  </div>
+                <div className="space-y-3">
+                  <FileText className="text-green-600 mx-auto" size={32} />
                   <div>
-                    <p className="font-semibold text-gray-900 text-lg">{file.name}</p>
+                    <p className="font-medium text-gray-900">{file.name}</p>
                     <p className="text-sm text-gray-600">Ready to upload ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFile(null)}
-                    className="text-red-500 hover:text-red-700 text-sm font-medium underline"
+                    className="text-red-600 hover:text-red-800 text-sm underline"
                   >
                     Remove file
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                    <Upload className="text-gray-400" size={32} />
-                  </div>
+                <div className="space-y-3">
+                  <Upload className="text-gray-400 mx-auto" size={32} />
                   <div>
-                    <p className="font-semibold text-gray-900 text-lg">Upload Paper File</p>
+                    <p className="font-medium text-gray-900">Upload Paper File</p>
                     <p className="text-sm text-gray-600">Drag and drop your file here or click to browse</p>
-                    <p className="text-xs text-gray-500 mt-1">Supported formats: .xlsx, .xls, .pdf (Max 10MB)</p>
+                    <p className="text-xs text-gray-500 mt-1">Supported formats: .xlsx, .xls (Max 10MB)</p>
                   </div>
                   <input
                     type="file"
-                    accept=".xlsx,.xls,.pdf"
+                    accept=".xlsx,.xls"
                     onChange={handleFileChange}
                     className="hidden"
                     id="file-upload"
                   />
                   <label
                     htmlFor="file-upload"
-                    className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer"
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800 cursor-pointer"
                   >
-                    <FileText size={16} />
+                    <FileText size={14} />
                     <span>Choose File</span>
                   </label>
                 </div>
@@ -630,16 +652,16 @@ const UploadPage = () => {
               type="button"
               onClick={handleSubmit}
               disabled={!file || isUploading}
-              className="inline-flex items-center space-x-3 px-12 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-lg font-semibold rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="inline-flex items-center space-x-2 px-8 py-3 bg-gray-900 text-white font-medium rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" />
+                  <Loader2 size={18} className="animate-spin" />
                   <span>Uploading...</span>
                 </>
               ) : (
                 <>
-                  <Check size={20} />
+                  <Check size={18} />
                   <span>Submit Paper</span>
                 </>
               )}

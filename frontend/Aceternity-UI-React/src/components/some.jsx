@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Menu, X, User, Mail, Lock, Eye, EyeOff, Home, BarChart3 } from 'lucide-react';
+import { FileText, Menu, X, User, Mail, Lock, Eye, EyeOff, Home, BarChart3, Upload } from 'lucide-react';
 import AccessRestrictionModal from './AccessRestrictionModal';
 import useAccessRestriction from './hooks/useAccessRestriction';
 
@@ -27,11 +27,42 @@ const Navbar = () => {
 
   // Check for existing user session on component mount
   React.useEffect(() => {
-    const token = sessionStorage.getItem('accessToken');
-    const userData = sessionStorage.getItem('user');
+    const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+    const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
     if (token && userData) {
-      setUser(JSON.parse(userData));
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Clear invalid data
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('user');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+      }
     }
+  }, []);
+
+  // Listen for auth state changes from other components
+  React.useEffect(() => {
+    const handleAuthStateChange = () => {
+      const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+      const userData = sessionStorage.getItem('user') || localStorage.getItem('user');
+      
+      if (token && userData) {
+        try {
+          setUser(JSON.parse(userData));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('authStateChanged', handleAuthStateChange);
+    return () => window.removeEventListener('authStateChanged', handleAuthStateChange);
   }, []);
 
   // Close user menu when clicking outside
@@ -46,7 +77,8 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showUserMenu]);
 
-   const navigateTo = (path) => {
+  // Navigation function - replace with your actual navigation logic
+  const navigateTo = (path) => {
     // For React Router, you would use:
     // const navigate = useNavigate();
     // navigate(path);
@@ -59,6 +91,8 @@ const Navbar = () => {
       window.location.href = '/dashboard';
     } else if (path === '/upload') {
       window.location.href = '/upload';
+    } else if (path === '/analytics') {
+      window.location.href = '/analytics';
     }
   };
 
@@ -81,7 +115,6 @@ const Navbar = () => {
 
   // Get user initials
   const getUserInitials = (userName) => {
-    // console.log(userName)
     if (!userName) return 'U';
     const names = userName.split(' ');
     if (names.length === 1) {
@@ -93,15 +126,16 @@ const Navbar = () => {
   const handleLogout = () => {
     sessionStorage.removeItem('accessToken');
     sessionStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
     setUser(null);
     setShowUserMenu(false);
-
+    
     // Dispatch event for other components
     window.dispatchEvent(new Event('authStateChanged'));
     
     // Navigate to home
     navigateTo('/');
-
   };
 
   const handleInputChange = (e) => {
@@ -124,47 +158,53 @@ const Navbar = () => {
     }
 
     try {
-       const apiUrl = isRegisterMode ? 'Yhttp://localhost:80/auth/register' : 'http://localhost:80/auth/login';
+      // Fixed the typo in the API URL
+      const apiUrl = isRegisterMode ? 'http://localhost:80/auth/register' : 'http://localhost:80/auth/login';
     
-    const requestBody = isRegisterMode 
-      ? {
-          userName: formData.userName,
-          email: formData.email,
-          password: formData.password
-        }
-      : {
-          email: formData.email,
-          password: formData.password
-        };
+      const requestBody = isRegisterMode 
+        ? {
+            userName: formData.userName,
+            email: formData.email,
+            password: formData.password
+          }
+        : {
+            email: formData.email,
+            password: formData.password
+          };
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Authentication failed');
-    }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Authentication failed');
+      }
 
-    const data = await response.json();
+      const data = await response.json();
 
+      // Store in both sessionStorage and localStorage for persistence
       sessionStorage.setItem('accessToken', data.accessToken);
       sessionStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
       setUser(data.user);
       setIsLoginModalOpen(false);
       setFormData({ userName: '', email: '', password: '', confirmPassword: '' });
-
-       // Dispatch event for other components
+      
+      // Dispatch event for other components
       window.dispatchEvent(new Event('authStateChanged'));
       
       // Navigate to dashboard after successful login
       navigateTo('/dashboard');
     } catch (error) {
       setError('Credentials not matched. Please try again');
+      console.error('Auth error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -188,7 +228,7 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             {/* Logo Section */}
-             <div 
+            <div 
               className="flex items-center space-x-3 cursor-pointer hover:scale-105 transition-transform"
               onClick={() => navigateTo('/')}
             >
@@ -200,7 +240,7 @@ const Navbar = () => {
               </span>
             </div>
             
-             {/* Navigation Links - Desktop */}
+            {/* Navigation Links - Desktop */}
             <div className="hidden md:flex items-center space-x-6">
               <button
                 onClick={() => navigateTo('/')}
@@ -221,13 +261,35 @@ const Navbar = () => {
               >
                 About
               </a>
+              <a 
+                href="#contact" 
+                className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500"
+              >
+                Contact
+              </a>
               <button
-                onClick={() => handleFeatureAccess('Dashboard',false,'/dashboard')}
+                onClick={() => handleFeatureAccess('Upload', false, '/upload')}
+                className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload</span>
+                {!user && <Lock className="w-3 h-3 ml-1" />}
+              </button>
+              <button
+                onClick={() => handleFeatureAccess('Dashboard', false, '/dashboard')}
                 className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>Dashboard</span>
-                {!user && <Lock className="w-4 h-4" />}
+                {!user && <Lock className="w-3 h-3 ml-1" />}
+              </button>
+              <button
+                onClick={() => handleFeatureAccess('Analytics', true, '/analytics')} // Requires premium
+                className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Analytics</span>
+                {(!user || !user.isPremium) && <Lock className="w-3 h-3 ml-1" />}
               </button>
             </div>
             
@@ -244,7 +306,7 @@ const Navbar = () => {
                   
                   {/* User Dropdown Menu */}
                   {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50">
+                    <div className="absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50">
                       <div className="px-4 py-3 border-b border-gray-600">
                         <p className="text-white font-semibold">{user.userName}</p>
                         <p className="text-gray-400 text-sm">{user.email}</p>
@@ -254,7 +316,7 @@ const Navbar = () => {
                           </span>
                         </div>
                       </div>
-                       <button
+                      <button
                         onClick={() => {
                           setShowUserMenu(false);
                           navigateTo('/dashboard');
@@ -265,8 +327,18 @@ const Navbar = () => {
                         <span>Dashboard</span>
                       </button>
                       <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          navigateTo('/upload');
+                        }}
+                        className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center space-x-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Upload Paper</span>
+                      </button>
+                      <button
                         onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors rounded-b-lg"
+                        className="w-full text-left px-4 py-2 text-red-300 hover:bg-red-900/20 hover:text-red-200 transition-colors rounded-b-lg border-t border-gray-600"
                       >
                         Logout
                       </button>
@@ -321,36 +393,74 @@ const Navbar = () => {
               >
                 About
               </a>
+              <a 
+                href="#contact" 
+                className="block relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Contact
+              </a>
               <button
-                onClick={() => handleFeatureAccess('Dashboard',false,'/dashboard')}
-                className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  handleFeatureAccess('Upload', false, '/upload');
+                }}
+                className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-2"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload</span>
+                {!user && <Lock className="w-3 h-3" />}
+              </button>
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  handleFeatureAccess('Dashboard', false, '/dashboard');
+                }}
+                className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-2"
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>Dashboard</span>
-                {!user && <Lock className="w-4 h-4" />}
+                {!user && <Lock className="w-3 h-3" />}
               </button>
-      
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  handleFeatureAccess('Analytics', true, '/analytics');
+                }}
+                className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Analytics</span>
+                {(!user || !user.isPremium) && <Lock className="w-3 h-3" />}
+              </button>
+              
               {user ? (
-                <div className="space-y-2">
-                  <div className="px-4 py-2 border-b border-gray-600">
+                <div className="space-y-2 border-t border-gray-600 pt-4">
+                  <div className="px-4 py-2">
                     <p className="text-white font-semibold">{user.userName}</p>
                     <p className="text-gray-400 text-sm">{user.email}</p>
-                  <div className="flex items-center space-x-1 mt-1">
+                    <div className="flex items-center space-x-1 mt-1">
                       <span className={`text-xs px-2 py-1 rounded ${user.isPremium ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-gray-300'}`}>
                         {user.isPremium ? 'Premium' : 'Free'}
                       </span>
                     </div>
                   </div>
                   <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors rounded-lg"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-red-300 hover:bg-red-900/20 hover:text-red-200 transition-colors rounded-lg"
                   >
                     Logout
                   </button>
                 </div>
               ) : (
                 <button 
-                  onClick={() => setIsLoginModalOpen(true)}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsLoginModalOpen(true);
+                  }}
                   className="w-full inline-block px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-lg font-semibold text-white rounded-lg shadow-lg hover:scale-105 hover:shadow-xl transition-transform duration-200"
                 >
                   Login
@@ -406,8 +516,8 @@ const Navbar = () => {
                     value={formData.userName}
                     onChange={handleInputChange}
                     placeholder="Username"
+                    required={isRegisterMode}
                     className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
                   />
                 </div>
               )}
@@ -420,8 +530,8 @@ const Navbar = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="Email Address"
+                  required
                   className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
                 />
               </div>
               
@@ -433,8 +543,8 @@ const Navbar = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Password"
+                  required
                   className="w-full pl-10 pr-12 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
                 />
                 <button
                   type="button"
@@ -456,14 +566,12 @@ const Navbar = () => {
                     placeholder="Confirm Password"
                     required={isRegisterMode}
                     className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
                   />
                 </div>
               )}
               
               <button
-                type="button"
-                onClick={handleSubmit}
+                type="submit"
                 disabled={isLoading}
                 className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-lg shadow-lg hover:scale-105 hover:shadow-xl transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
@@ -475,6 +583,7 @@ const Navbar = () => {
               <p className="text-gray-400">
                 {isRegisterMode ? 'Already have an account?' : "Don't have an account?"}
                 <button
+                  type="button"
                   onClick={toggleMode}
                   className="ml-2 text-blue-400 hover:text-blue-300 font-semibold transition-colors"
                 >

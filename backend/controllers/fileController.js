@@ -112,7 +112,6 @@ const saveToDB = async ( userId,Sequence, FormData, filePath) => {
 
         // Step 7: Save Data to MongoDB
         const paper = new PaperInfo({
-            userId,
             "College Name": formData["College Name"],
             "Branch": formData.Branch,
             "Year Of Study": formData["Year Of Study"],
@@ -124,7 +123,8 @@ const saveToDB = async ( userId,Sequence, FormData, filePath) => {
                 COs: coDetails,
                 ModuleHours: moduleHours
             },
-            "Collected Data": evaluationResult
+            "Collected Data": evaluationResult,
+            "userId": userId
         });
 
         // Step 8: Save the paper document to MongoDB
@@ -137,3 +137,107 @@ const saveToDB = async ( userId,Sequence, FormData, filePath) => {
     }
 };
 
+exports.getResults = async (req, res) => {
+  try {
+    // Safely destructure userId from req.user, fallback to 'anonymous' if req.user is undefined
+    const { userId } = req.user || { userId: 'anonymous' };
+    // console.log(userId)
+   
+    // Get all results for this user
+    const userResults = await PaperInfo.find({ userId })
+                                  .sort({ createdAt: -1 })
+                                  .lean();
+
+    if (userResults.length === 0) {
+      return res.status(404).json({ 
+        error: 'No results found',
+        message: 'No analysis results found for your account'
+      });
+    }
+
+    // Return the most recent result
+    const latestResult = userResults[0];
+    const { extractedText, ...responseData } = latestResult;
+
+    res.json({
+      success: true,
+      data: responseData
+    });
+
+  } catch (error) {
+    console.error('Get results error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to retrieve results'
+    });
+  }
+};
+
+// exports.getResults = async(req, res) => {
+//   try{
+//     const id = req.params.id;
+//     console.log(id);
+//     const paper = await PaperInfo.findById(id);
+//     res.status(200).json(paper);
+//   } catch(error){
+//     res.status(500).json({message: error.message})
+//   }
+// };
+
+exports.getResultsById = async (req, res) => {
+  try {
+    // Safely destructure userId from req.user, fallback to 'anonymous' if req.user is undefined
+    const { userId } = req.user || { userId: 'anonymous' };
+   
+   
+    // Get all results for this user
+    const userResults = await PaperInfo.find({ userId })
+                                  .sort({ createdAt: -1 })
+                                  .lean();
+
+    if (userResults.length === 0) {
+      return res.status(404).json({ 
+        error: 'No results found',
+        message: 'No analysis results found for your account'
+      });
+    }
+
+    // Return the most recent result
+    const results = userResults.map(({extractedText, ...rest}) => rest);
+
+    res.json({
+      success: true,
+      data: results
+    });
+
+  } catch (error) {
+    console.error('Get results error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to retrieve results'
+    });
+  }
+};
+
+exports.searchPapers = async(req, res) => {
+    try{
+        const { userId } = req.user;
+        const {query} = req.body;
+
+        const searchRegex = new RegExp(query, 'i');
+
+        const papers = await PaperInfo.find ({
+            userId: userId,
+            $or: [
+            {"College Name":searchRegex},
+            {"Branch":searchRegex},
+            {"Course Name":searchRegex},
+            {"Course Code":searchRegex}
+        ]
+    });
+
+    res.json(papers);
+}catch(error){
+    res.status(500).json({error: error.message })
+}
+};

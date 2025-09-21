@@ -1,5 +1,8 @@
 //v2
 const { FindBloomLevelsInText } = require("../Regex/Regex");
+const { generateBloomRecommendations } = require("../recommendation/bloomRecommendation");
+const { generateCORecommendations } = require("../recommendation/coWeightageRecommendation");
+const { generateModuleRecommendations } = require("../recommendation/moduleWeightageRecommendation");
 
 // Normalize sequence data to ensure the sum of all weights is 100
 function Normalize(seqData) {
@@ -184,13 +187,26 @@ dataArray.forEach(([co, data]) => {
 
     console.log("Final Score: ", FinalScore);
 
+      // Generate recommendations and log them
+    const bloomRecommendations = generateBloomRecommendations(SequenceData, pre_data, bloomLevelMap);
+    console.log("Bloom Recommendations:", bloomRecommendations); 
+
+    const coRecommendations = generateCORecommendations(pre_data, CO_Map);
+    console.log("CO Recommendations:", coRecommendations); 
+
+    const moduleRecommendations = generateModuleRecommendations(ModuleWeights);
+    console.log("Module Recommendations:", moduleRecommendations); 
+
 
     return {
         QuestionData: SequenceData,
         ModuleData: ModuleWeights,
         BloomsData: BT_Weights,
         COData: CO_Map,
-        FinalScore
+        FinalScore,
+        BloomRecommendations: bloomRecommendations,
+        CORecommendations: coRecommendations,
+        ModuleRecommendations: moduleRecommendations
     };
 };
 

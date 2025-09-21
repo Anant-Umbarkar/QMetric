@@ -19,5 +19,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 router.post('/totext', authenticateToken, upload.single('file'), fileController.convertToText);
+router.get('/totext', authenticateToken, fileController.getResults);
+// router.get('/totext/:id', authenticateToken, fileController.getResults);
+router.get('/all', authenticateToken, fileController.getResultsById);
+router.post ('/search', authenticateToken, fileController.searchPapers);
+
 
 module.exports = router;
