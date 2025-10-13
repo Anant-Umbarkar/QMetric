@@ -24,5 +24,8 @@ router.get('/totext', authenticateToken, fileController.getResults);
 router.get('/all', authenticateToken, fileController.getResultsById);
 router.post ('/search', authenticateToken, fileController.searchPapers);
 
+router.get('/test', (req, res) => {
+  res.send('File route is working!');
+});
 
 module.exports = router;
