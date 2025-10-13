@@ -123,6 +123,7 @@ const saveToDB = async ( userId,Sequence, FormData, filePath) => {
                 COs: coDetails,
                 ModuleHours: moduleHours
             },
+            blommLevelMap: bloomLevelMap,
             "Collected Data": evaluationResult,
             "userId": userId
         });

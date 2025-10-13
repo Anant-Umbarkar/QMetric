@@ -55,8 +55,8 @@ const Navbar = () => {
     console.log(`Navigating to: ${path}`);
     if (path === '/') {
       window.location.href = '/';
-    } else if (path === '/dashboard') {
-      window.location.href = '/dashboard';
+    } else if (path === '/') {
+      window.location.href = '/';
     } else if (path === '/upload') {
       window.location.href = '/upload';
     }
@@ -162,7 +162,7 @@ const Navbar = () => {
       window.dispatchEvent(new Event('authStateChanged'));
       
       // Navigate to dashboard after successful login
-      navigateTo('/dashboard');
+      navigateTo('/');
     } catch (error) {
       setError('Credentials not matched. Please try again');
     } finally {
@@ -222,7 +222,7 @@ const Navbar = () => {
                 About
               </a>
               <button
-                onClick={() => handleFeatureAccess('Dashboard',false,'/dashboard')}
+                onClick={() => handleFeatureAccess('Dashboard',false,'/')}
                 className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
               >
                 <BarChart3 className="w-4 h-4" />
@@ -257,7 +257,7 @@ const Navbar = () => {
                        <button
                         onClick={() => {
                           setShowUserMenu(false);
-                          navigateTo('/dashboard');
+                          navigateTo('/');
                         }}
                         className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center space-x-2"
                       >
@@ -322,7 +322,7 @@ const Navbar = () => {
                 About
               </a>
               <button
-                onClick={() => handleFeatureAccess('Dashboard',false,'/dashboard')}
+                onClick={() => handleFeatureAccess('Dashboard',false,'/')}
                 className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
               >
                 <BarChart3 className="w-4 h-4" />

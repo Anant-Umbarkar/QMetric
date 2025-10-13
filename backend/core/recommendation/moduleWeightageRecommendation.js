@@ -14,6 +14,13 @@ function generateModuleRecommendations(moduleWeights) {
                 actual,
                 suggestion: actual < expected ? "Increase marks for this module" : "Reduce marks for this module"
             });
+        } else {
+            recommendations.push({
+                module: `Module ${index + 1}`,
+                expected,
+                actual,
+                suggestion: "Marks for this module are appropriate"
+            });
         }
     });
 

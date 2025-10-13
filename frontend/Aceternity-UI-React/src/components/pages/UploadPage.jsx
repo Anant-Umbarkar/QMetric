@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Trash2, Upload, FileText, Plus, Check, Target, BookOpen, Loader2, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 const UploadPage = () => {
   const [formData, setFormData] = useState({
@@ -19,7 +18,6 @@ const UploadPage = () => {
   const [dragOver, setDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   // Validation function
   const validateForm = () => {
@@ -236,16 +234,11 @@ const UploadPage = () => {
           console.log('Extracted ID:', resultId);
 
           if (resultId) {
-            // Navigate to result page with the data passed as state
-            navigate(`/result`, { 
-              state: { 
-                authToken: token,
-                fromUpload: true 
-              } 
-            });
-            
             // Success message
             alert('File uploaded and processed successfully!');
+
+            // Redirect to result page using native browser navigation
+            window.location.href = '/result';
 
             // Reset form on success
             setFile(null);
@@ -397,7 +390,7 @@ const UploadPage = () => {
                     name={key}
                     value={formData[key]}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
                     placeholder={`Enter ${key.toLowerCase()}`}
                   />
                 </div>
@@ -467,7 +460,7 @@ const UploadPage = () => {
                           placeholder="0-100"
                           value={co.weight}
                           onChange={(e) => handleCOChange(index, 'weight', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
                           min="0"
                           max="100"
                           step="0.1"
@@ -480,7 +473,7 @@ const UploadPage = () => {
                         <select
                           value={co.blooms}
                           onChange={(e) => handleCOChange(index, 'blooms', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
                         >
                           <option value="">Select Level</option>
                           <option value="Remember">Remember</option>
@@ -551,7 +544,7 @@ const UploadPage = () => {
                           placeholder="Enter module name or topic..."
                           value={module.name}
                           onChange={(e) => handleModuleChange(index, 'name', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
                         />
                       </div>
                       <div>
@@ -563,7 +556,7 @@ const UploadPage = () => {
                           placeholder="Hours"
                           value={module.hours}
                           onChange={(e) => handleModuleChange(index, 'hours', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
                           min="0"
                           step="0.5"
                         />

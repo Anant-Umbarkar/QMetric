@@ -19,6 +19,13 @@ function generateCORecommendations(coDetails, actualCOData) {
                 actual,
                 suggestion: actual < roundedExpected ? "Increase marks" : "Decrease marks"
             });
+        } else {
+            recommendations.push({
+                co: coKey,
+                expected: roundedExpected,
+                actual,
+                suggestion: "Marks are appropriate"
+            });
         }
     });
 

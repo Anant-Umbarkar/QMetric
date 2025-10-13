@@ -75,21 +75,16 @@ function obtainD(QHBTL, COBTL, returnRemark = false) {
 
 // Main Evaluation function
 exports.Evaluate = (SequenceData, pre_data, Module_Hrs, bloomLevelMap) => {
-    console.log(SequenceData);
-    console.log(pre_data);
-    console.log(Module_Hrs);
-    console.log(bloomLevelMap);
-
     let ModuleWeights = [];
     let checkModule = true;
 
     // Assuming bloomLevelMap is available
 
 const BT_Weights = {
-    1: { level: 1, weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
-    2: { level: 2, weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
-    3: { level: 3, weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
-    4: { level: 4, weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
+    1: { level: 1, name: "", weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
+    2: { level: 2, name: "", weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
+    3: { level: 3, name: "", weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
+    4: { level: 4, name: "", weights: 0, marks: 0, BT_penalty: 0, No_Of_Questions: 0 },
 };
 
 // Sort pre_data by weight (descending)
@@ -99,13 +94,21 @@ const dataArray = Object.entries(pre_data).sort((a, b) => {
 
 // Fill BT_Weights based on the bloomLevelMap
 dataArray.forEach(([co, data]) => {
-
-    const bloomKey = data.blooms[0]?.toLowerCase(); 
-    const bloomLevel = bloomLevelMap[bloomKey]; 
-    
+    const bloomKey = data.blooms[0]?.toLowerCase();
+    const bloomLevel = bloomLevelMap[bloomKey];
     if (bloomLevel) {
         BT_Weights[bloomLevel].weights += data.weight;
+        BT_Weights[bloomLevel].name = data.blooms[0]; // Add Bloom's level name
     }
+
+    // Get all Bloom level names mapped to level 4
+    const level4Names = Object.entries(bloomLevelMap)
+        .filter(([name, level]) => level === 4)
+        .map(([name]) => name);
+
+    // Use level4Names as the name for level 4 wherever needed
+    BT_Weights[4].name = level4Names.join(', ');
+
 });
 
 
@@ -130,8 +133,9 @@ dataArray.forEach(([co, data]) => {
 
     SequenceData = Normalize(SequenceData);
 
-    let QT_Map = {}, CO_Map = {}, Module_Map = {}, BT_Map = {};
+    let QT_Map = {}, CO_Map = {};
     let QP = 0, QPMin = 0, QPMax = 0;
+    let questionRecommendations = [];
 
     SequenceData.forEach(i => {
         QT_Map[i["Question Type"]] = (QT_Map[i["Question Type"]] || 0) + 1;
@@ -149,6 +153,21 @@ dataArray.forEach(([co, data]) => {
         QPMax += obtainD(1,COBTL);
         QPMin += obtainD(4,COBTL);
 
+
+        const extractedVerb = i["Bloom's Verbs"] || "";
+        // Get the highest verb (Bloom's level name) for this question
+        const highestVerb =i["Bloom's Highest Verb"] || "N/A";
+
+        // Create recommendation object for this question
+        questionRecommendations.push({
+            QuestionData: i["Question No"] || i["Question"],
+            marks: +i.Marks,
+            co: coKey,
+            qScore: qScore,
+            extractedVerb: extractedVerb,
+            highestVerb: highestVerb,
+            remark: remark
+        });
               
         BT_Weights[i["Bloom's Taxonomy Level"]].marks += (+i.Marks);
         BT_Weights[i["Bloom's Taxonomy Level"]].No_Of_Questions++;
@@ -166,9 +185,9 @@ dataArray.forEach(([co, data]) => {
         }
     });
 
-    console.log("QP: ",QP);
-    console.log("QPMax: ",QPMax);
-    console.log("QPMin: ",QPMin);
+    // console.log("QP: ",QP);
+    // console.log("QPMax: ",QPMax);
+    // console.log("QPMin: ",QPMin);
 
     // Normalize QP score
     const QP_Final = ((QP - QPMin) / ((QPMax - QPMin) || 1)) * 100;
@@ -187,15 +206,19 @@ dataArray.forEach(([co, data]) => {
 
     console.log("Final Score: ", FinalScore);
 
+    console.log("BT_Weights: ", BT_Weights);
+
       // Generate recommendations and log them
-    const bloomRecommendations = generateBloomRecommendations(SequenceData, pre_data, bloomLevelMap);
-    console.log("Bloom Recommendations:", bloomRecommendations); 
+    // const bloomRecommendations = generateBloomRecommendations(SequenceData, pre_data, bloomLevelMap, CO_Map);
+    // console.log("Bloom Recommendations:", bloomRecommendations); 
 
     const coRecommendations = generateCORecommendations(pre_data, CO_Map);
     console.log("CO Recommendations:", coRecommendations); 
 
     const moduleRecommendations = generateModuleRecommendations(ModuleWeights);
     console.log("Module Recommendations:", moduleRecommendations); 
+
+    console.log("Question Recommendations:", questionRecommendations);
 
 
     return {
@@ -204,9 +227,9 @@ dataArray.forEach(([co, data]) => {
         BloomsData: BT_Weights,
         COData: CO_Map,
         FinalScore,
-        BloomRecommendations: bloomRecommendations,
+        // BloomRecommendations: bloomRecommendations,
         CORecommendations: coRecommendations,
-        ModuleRecommendations: moduleRecommendations
+        ModuleRecommendations: moduleRecommendations,
+        QuestionRecommendations: questionRecommendations
     };
 };
-

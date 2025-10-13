@@ -10,6 +10,7 @@ const PaperSchema = new mongoose.Schema({
   "Course Teacher": { type: String, required: true },
   "Sequence": [],
   "Collected Data":[],
+  "blommLevelMap": { type: Object, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 },{timestamps:true}); 
 
