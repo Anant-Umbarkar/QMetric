@@ -185,6 +185,9 @@ const UploadPage = () => {
     formDataToSend.append("file", file);
     formDataToSend.append("FormData", JSON.stringify(formData)); // Capital F
     formDataToSend.append("Sequence", JSON.stringify(transformedSequence)); // Backend expects Sequence
+    console.log("FormData:", formData);
+    console.log("Sequence:", transformedSequence);
+
 
     try {
       const token = sessionStorage.getItem('accessToken');
