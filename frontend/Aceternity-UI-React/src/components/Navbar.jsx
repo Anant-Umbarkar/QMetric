@@ -124,7 +124,7 @@ const Navbar = () => {
     }
 
     try {
-       const apiUrl = isRegisterMode ? 'https://qmetric-2.onrender.com/auth/register' : 'https://qmetric-2.onrender.com/auth/login';
+       const apiUrl = isRegisterMode ? 'https://qmetric-2.onrender.com/auth/create-account' : 'https://qmetric-2.onrender.com/auth/login';
     
     const requestBody = isRegisterMode 
       ? {
