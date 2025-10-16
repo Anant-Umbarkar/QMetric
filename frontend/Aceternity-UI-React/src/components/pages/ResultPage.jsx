@@ -22,7 +22,7 @@ const ResultPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:80/upload/totext', {
+      const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,

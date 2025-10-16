@@ -190,7 +190,7 @@ const UploadPage = () => {
       const token = sessionStorage.getItem('accessToken');
       console.log('Token:', token);
 
-      const API_BASE_URL = 'http://localhost:80'; 
+      const API_BASE_URL = 'https://qmetric-2.onrender.com'; 
       const headers = {};
       
       if (token) {
