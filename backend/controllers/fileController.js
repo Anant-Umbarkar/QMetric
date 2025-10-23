@@ -11,7 +11,15 @@ exports.convertToText = async (req, res) => {
     }
 
     const {userId} = req.user; 
-        
+
+    console.log("✅ Received POST /upload/totext");
+    console.log("req.body keys:", Object.keys(req.body));
+    console.log("req.body.FormData (raw):", req.body.FormData);
+    console.log("req.body.Sequence (raw):", req.body.Sequence);
+    console.log("req.file:", req.file);
+    console.log("userId:", userId);
+
+    
     const inputFileName = req.file.originalname;
     const fileExtension = path.extname(inputFileName).toLowerCase();
     const supportedExtensions = ['.xlsx'];

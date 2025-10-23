@@ -7,9 +7,8 @@ const path = require('path');
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
-
   destination: (req, file, cb) => {
-    cb(null, '/tmp');
+    cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
     const fileExt = path.extname(file.originalname);
