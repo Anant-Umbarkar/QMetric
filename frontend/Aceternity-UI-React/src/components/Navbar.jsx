@@ -124,7 +124,7 @@ const Navbar = () => {
     }
 
     try {
-       const apiUrl = isRegisterMode ? 'https://qmetric-2.onrender.com/auth/create-account' : 'https://qmetric-2.onrender.com/auth/login';
+       const apiUrl = isRegisterMode ? 'https://q-metric-3k72.vercel.app/auth/create-account' : 'https://q-metric-3k72.vercel.app/auth/login';
     
     const requestBody = isRegisterMode 
       ? {

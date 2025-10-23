@@ -22,7 +22,7 @@ const ResultPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
+      const response = await fetch('https://q-metric-3k72.vercel.app/upload/totext', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,

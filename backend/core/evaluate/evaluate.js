@@ -145,8 +145,7 @@ dataArray.forEach(([co, data]) => {
         const coBloom = (pre_data[coKey]?.blooms?.[0] || "").toLowerCase();
         const COBTL = bloomLevelMap[coBloom] || 4;
 
-        const QHBTL = BT_Weights[i["Bloom's Taxonomy Level"]].level || 4;
-        console.log(`Question No: ${i["Question No"] || i["Question"]}, CO: ${coKey}, CO Bloom Level: ${COBTL}, Question Bloom Level: ${QHBTL}`);
+        const QHBTL = BT_Weights[i["Bloom's Taxonomy Level"]].level;
 
         const{qScore, remark} = obtainD(QHBTL,COBTL,true);
         i["Remark"] = remark;
