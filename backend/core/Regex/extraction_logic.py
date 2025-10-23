@@ -39,8 +39,7 @@ def extract_blooms_verbs(text):
     doc = nlp(text)
     return sorted({
         lemma for token in doc
-        if token.pos_ == "VERB"
-        and (lemma := token.lemma_.lower().strip())
+        if (lemma := token.lemma_.lower().strip())
         and lemma.isalpha()  
         and lemma in blooms_verbs
     })

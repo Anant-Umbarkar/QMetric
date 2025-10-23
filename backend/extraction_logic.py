@@ -1,14 +1,11 @@
 # extraction_logic.py
 import sys
 import spacy
-import subprocess
 
 # Load spaCy English model
 try:
     nlp = spacy.load("en_core_web_sm")
 except Exception as e:
-    print("Downloading spaCy model...", file=sys.stderr)
-    subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"], check=True)
     print(f"spaCy model loading error: {e}", file=sys.stderr)
     sys.exit(1)
 
@@ -54,4 +51,3 @@ if __name__ == "__main__":
         sys.exit(1)
 
     verbs = extract_blooms_verbs(input_text)
-    print(','.join(verbs))
