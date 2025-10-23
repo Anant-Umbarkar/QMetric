@@ -193,14 +193,13 @@ const UploadPage = () => {
       const token = sessionStorage.getItem('accessToken');
       console.log('Token:', token);
 
-      const API_BASE_URL = 'http://localhost:80'; 
       const headers = {};
       
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('https://q-metric-3k72.vercel.app/upload/totext', {
+      const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
         method: 'POST',
         headers,
         body: formDataToSend
