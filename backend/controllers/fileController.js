@@ -90,29 +90,45 @@ const saveToDB = async ( userId,Sequence, FormData, filePath) => {
             }
         });
 
-        // Step 3: Define Bloom Level Order
-        const allBloomLevels = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
-        const bloomLevelMap = {};
+        // Step 3: Define all 6 Bloom levels in standard order
+const allBloomLevels = ['knowledge', 'comprehension', 'apply', 'analyze', 'evaluate', 'synthesis'];
+const bloomLevelMap = {};
 
-        // Step 4: Sort COs by weight (highest weight gets lowest index)
-        const sortedCOs = Object.entries(coDetails).sort((a, b) => b[1].weight - a[1].weight);
+// Step 4: Collect unique Bloom levels used in COs
+const usedBloomLevels = new Set();
+Object.values(coDetails).forEach(data => {
+    const bloom = (data.blooms[0] || "").toLowerCase();
+    if (bloom && allBloomLevels.includes(bloom)) {
+        usedBloomLevels.add(bloom);
+    }
+});
 
-        // Assign levels to used Bloom levels
-        sortedCOs.forEach(([_, data], index) => {
-            const bloom = (data.blooms[0] || "").toLowerCase();
-            if (bloom && !bloomLevelMap[bloom]) {
-                bloomLevelMap[bloom] = index + 1;
-            }
-        });
+// Step 5: Sort used Bloom levels by their standard order
+const sortedUsedBlooms = allBloomLevels.filter(level => usedBloomLevels.has(level));
 
-        // Step 5: Assign default level 4 to unused Bloom levels
-        allBloomLevels.forEach(level => {
-            if (!bloomLevelMap[level]) {
-                bloomLevelMap[level] = 4;
-            }
-        });
+// Step 6: Assign levels dynamically (1, 2, 3, ... based on what's used)
+sortedUsedBlooms.forEach((bloom, index) => {
+    bloomLevelMap[bloom] = index + 1;
+});
 
-        console.log("Normalized Bloom Level Map:", bloomLevelMap);
+// Step 7: Assign remaining unused Bloom levels to next available level
+let nextLevel = sortedUsedBlooms.length + 1;
+allBloomLevels.forEach(level => {
+    if (!bloomLevelMap[level] && nextLevel <= 6) {
+        bloomLevelMap[level] = nextLevel;
+        nextLevel++;
+    }
+});
+
+// Step 8: Any remaining levels get assigned to level 6
+allBloomLevels.forEach(level => {
+    if (!bloomLevelMap[level]) {
+        bloomLevelMap[level] = 6;
+    }
+});
+
+console.log("Used Bloom Levels:", Array.from(usedBloomLevels));
+console.log("Dynamic Bloom Level Map:", bloomLevelMap);
 
         // Step 6: Process Question Data
         const questionData = await Structurize([], filePath, bloomLevelMap);

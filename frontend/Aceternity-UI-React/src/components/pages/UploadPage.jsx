@@ -14,6 +14,8 @@ const UploadPage = () => {
 
   const [courseOutcomes, setCourseOutcomes] = useState([]);
   const [modules, setModules] = useState([]);
+  const [numCOs, setNumCOs] = useState('');
+  const [numModules, setNumModules] = useState('');
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -90,6 +92,34 @@ const UploadPage = () => {
 
   const handleAddModule = () => {
     setModules([...modules, { name: "", hours: "" }]);
+  };
+
+  const handleNumCOsChange = (e) => {
+    const num = parseInt(e.target.value) || 0;
+    setNumCOs(e.target.value);
+    if (num > 0 && num <= 20) {
+      const newCOs = Array.from({ length: num }, () => ({ weight: "", blooms: "" }));
+      setCourseOutcomes(newCOs);
+      setError('');
+    } else if (num > 20) {
+      setError('Maximum 20 course outcomes allowed');
+    } else {
+      setCourseOutcomes([]);
+    }
+  };
+
+  const handleNumModulesChange = (e) => {
+    const num = parseInt(e.target.value) || 0;
+    setNumModules(e.target.value);
+    if (num > 0 && num <= 20) {
+      const newModules = Array.from({ length: num }, () => ({ name: "", hours: "" }));
+      setModules(newModules);
+      setError('');
+    } else if (num > 20) {
+      setError('Maximum 20 modules allowed');
+    } else {
+      setModules([]);
+    }
   };
 
   const handleCOChange = (index, field, value) => {
@@ -199,7 +229,8 @@ const UploadPage = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
+      const response = await fetch('http://localhost:80/upload/totext', {
+      //const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
         method: 'POST',
         headers,
         body: formDataToSend
@@ -402,35 +433,44 @@ const UploadPage = () => {
 
           {/* Course Outcomes Section */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center space-x-2 mb-1">
                 <Target className="text-gray-700" size={18} />
                 <span>Course Outcomes</span>
               </h2>
-              <div className="flex items-center space-x-4">
-                {courseOutcomes.length > 0 && (
-                  <div className="text-sm">
-                    <span className={`font-medium ${Math.abs(getCurrentWeightSum() - 100) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
-                      Total: {getCurrentWeightSum().toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={handleAddCO}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800"
-                >
-                  <Plus size={14} />
-                  <span>Add CO</span>
-                </button>
-              </div>
+              <p className="text-sm text-gray-600 ml-7">Define learning objectives with weights and cognitive levels. Weights must sum to 100%.</p>
             </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Course Outcomes <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={numCOs}
+                onChange={handleNumCOsChange}
+                min="1"
+                max="20"
+                placeholder="Enter number (1-20)"
+                className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
+              />
+            </div>
+
+            {courseOutcomes.length > 0 && (
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                <div className="text-sm">
+                  <span className={`font-medium ${Math.abs(getCurrentWeightSum() - 100) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
+                    Total Weight: {getCurrentWeightSum().toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            )}
 
             {courseOutcomes.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                 <Target className="text-gray-400 mx-auto mb-3" size={32} />
                 <p className="text-gray-600">No course outcomes added yet</p>
-                <p className="text-gray-500 text-sm mt-1">Click "Add CO" to define your course outcomes</p>
+                <p className="text-gray-500 text-sm mt-1">Enter the number of course outcomes above to get started</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -478,12 +518,12 @@ const UploadPage = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
                         >
                           <option value="">Select Level</option>
-                          <option value="Remember">Remember</option>
-                          <option value="Understand">Understand</option>
+                          <option value="Knowledge">Knowledge</option>
+                          <option value="Comprehension">Comprehension</option>
                           <option value="Apply">Apply</option>
                           <option value="Analyze">Analyze</option>
                           <option value="Evaluate">Evaluate</option>
-                          <option value="Create">Create</option>
+                          <option value="Synthesis">Synthesis</option>
                         </select>
                       </div>
                     </div>
@@ -495,26 +535,34 @@ const UploadPage = () => {
 
           {/* Modules Section */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center space-x-2 mb-1">
                 <BookOpen className="text-gray-700" size={18} />
                 <span>Course Modules</span>
               </h2>
-              <button
-                type="button"
-                onClick={handleAddModule}
-                className="flex items-center space-x-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-md hover:bg-gray-800"
-              >
-                <Plus size={14} />
-                <span>Add Module</span>
-              </button>
+              <p className="text-sm text-gray-600 ml-7">Organize your course content into modules with corresponding teaching hours.</p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Modules <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={numModules}
+                onChange={handleNumModulesChange}
+                min="1"
+                max="20"
+                placeholder="Enter number (1-20)"
+                className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
+              />
             </div>
 
             {modules.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                 <BookOpen className="text-gray-400 mx-auto mb-3" size={32} />
                 <p className="text-gray-600">No modules added yet</p>
-                <p className="text-gray-500 text-sm mt-1">Click "Add Module" to structure your course content</p>
+                <p className="text-gray-500 text-sm mt-1">Enter the number of modules above to get started</p>
               </div>
             ) : (
               <div className="space-y-4">

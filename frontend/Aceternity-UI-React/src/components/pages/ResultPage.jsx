@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Download, FileText, CheckCircle } from 'lucide-react';
+import { AlertCircle, Download, CheckCircle } from 'lucide-react';
 
 const ResultPage = () => {
-  const authToken = sessionStorage.getItem('accessToken');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
+    const authToken = sessionStorage.getItem('accessToken');
     if (authToken) {
-      fetchData();
+      fetchData(authToken);
     } else {
       setError('Authorization token is required');
       setLoading(false);
     }
-  }, [authToken]);
+  }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (authToken) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
+      const response = await fetch('http://localhost:80/upload/totext', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -76,39 +76,25 @@ const ResultPage = () => {
       const moduleRecommendations = collectedData?.ModuleRecommendations || [];
       const questionRecommendations = collectedData?.QuestionRecommendations || [];
 
-      // Generate question rows with recommendations
-      const questionRows = questionRecommendations.map((rec, index) => {
-        return `
-          <tr>
-            <td class="text-center">${index + 1}</td>
-            <td>${rec.QuestionData || 'N/A'}</td>
-            <td class="text-center">${rec.marks || 0}</td>
-            <td class="text-center">${rec.co || 'N/A'}</td>
-            <td class="text-center">${rec.extractedVerb || 'N/A'}</td>
-            <td class="text-center">${rec.highestVerb || 'N/A'}</td>
-            <td class="text-center ${rec.qScore === 1 ? 'status-match' : rec.qScore === 2 ? 'status-higher' : 'status-lower'}">
-              ${rec.qScore}
-            </td>
-            <td class="text-center ${rec.remark === 'Matches Expected Blooms Level' ? 'status-match' : rec.remark === 'Higher than Expected Blooms Level' ? 'status-higher' : 'status-lower'}">
-              ${rec.remark || 'No remarks'}
-            </td>
-          </tr>
-        `;
-      }).join('');
+      const totalQuestions = questionRecommendations.length;
+      const matchingQuestions = questionRecommendations.filter(q => q.remark === 'Matches Expected Blooms Level').length;
+      const higherQuestions = questionRecommendations.filter(q => q.remark === 'Higher than Expected Blooms Level').length;
+      const lowerQuestions = questionRecommendations.filter(q => q.remark === 'Lower than Expected Blooms Level').length;
+      const matchPercentage = totalQuestions > 0 ? (matchingQuestions / totalQuestions * 100).toFixed(1) : 0;
 
-      // Generate CO rows
+      // Generate table rows for CO configuration
       const coRows = Object.keys(sequence[0]?.COs || {}).map(co => {
-        const coData = sequence[0].COs[co];
+        const coDataItem = sequence[0].COs[co];
         return `
           <tr>
             <td class="text-center">${co}</td>
-            <td class="text-center">${coData.weight || 0}%</td>
-            <td class="text-center">${coData.blooms?.[0] || 'N/A'}</td>
+            <td class="text-center">${coDataItem.weight || 0}%</td>
+            <td class="text-center">${coDataItem.blooms?.[0] || 'N/A'}</td>
           </tr>
         `;
       }).join('');
 
-      // Generate module rows
+      // Generate table rows for modules
       const moduleRows = Object.keys(sequence[0]?.ModuleHours || {}).map(module => {
         const hours = sequence[0].ModuleHours[module];
         return `
@@ -119,7 +105,7 @@ const ResultPage = () => {
         `;
       }).join('');
 
-      // Generate Bloom's level map rows
+      // Generate table rows for Bloom's level map
       const bloomLevelMapRows = Object.keys(blommLevelMap).map(level => `
         <tr>
           <td>${level}</td>
@@ -127,7 +113,25 @@ const ResultPage = () => {
         </tr>
       `).join('');
 
-      // Generate module analysis rows
+      // Generate table rows for Bloom's data
+      const bloomDataRows = Object.keys(bloomsData).map(level => {
+        const bloomData = bloomsData[level];
+        const variance = (bloomData.marks || 0) - (bloomData.weights || 0);
+        return `
+          <tr>
+            <td>${bloomData.name || `Level ${level}`}</td>
+            <td class="text-center">${bloomData.level}</td>
+            <td class="text-center">${(bloomData.weights || 0).toFixed(1)}%</td>
+            <td class="text-center">${(bloomData.marks || 0).toFixed(1)}%</td>
+            <td class="text-center ${variance < 0 ? 'negative' : 'positive'}">
+              ${variance > 0 ? '+' : ''}${variance.toFixed(1)}%
+            </td>
+            <td class="text-center">${bloomData.No_Of_Questions || 0}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Generate table rows for module analysis
       const moduleAnalysisRows = moduleData.map((module, index) => {
         const variance = (module.actual || 0) - (module.expected || 0);
         return `
@@ -135,67 +139,73 @@ const ResultPage = () => {
             <td class="text-center">Module ${index + 1}</td>
             <td class="text-center">${(module.expected || 0).toFixed(1)}%</td>
             <td class="text-center">${(module.actual || 0).toFixed(1)}%</td>
-            <td class="text-center ${variance < 0 ? 'negative' : 'positive'}">${variance > 0 ? '+' : ''}${variance.toFixed(1)}%</td>
+            <td class="text-center ${variance < 0 ? 'negative' : 'positive'}">
+              ${variance > 0 ? '+' : ''}${variance.toFixed(1)}%
+            </td>
           </tr>
         `;
       }).join('');
 
-      // Generate Bloom's data rows
-      const bloomDataRows = Object.keys(bloomsData).map(level => {
-        const data = bloomsData[level];
-        const levelName = data.name || `Level ${level}`;
-        const variance = (data.marks || 0) - (data.weights || 0);
-        return `
-          <tr>
-            <td>${levelName}</td>
-            <td class="text-center">${data.level}</td>
-            <td class="text-center">${(data.weights || 0).toFixed(1)}%</td>
-            <td class="text-center">${(data.marks || 0).toFixed(1)}%</td>
-            <td class="text-center ${variance < 0 ? 'negative' : 'positive'}">${variance > 0 ? '+' : ''}${variance.toFixed(1)}%</td>
-            <td class="text-center">${data.No_Of_Questions || 0}</td>
-          </tr>
-        `;
-      }).join('');
-
-      // Generate CO analysis rows
+      // Generate table rows for CO analysis
       const coAnalysisRows = Object.keys(coData).map(co => `
         <tr>
           <td class="text-center">CO${co}</td>
           <td class="text-center">${(coData[co] || 0).toFixed(1)}%</td>
-          <td class="text-center status-match">Complete</td>
+          <td class="text-center positive">Complete</td>
         </tr>
       `).join('');
 
-      // Generate CO recommendations
-      const coRecommendationRows = coRecommendations.map(rec => `
+      // Generate table rows for question recommendations
+      const questionRows = questionRecommendations.map((rec, index) => `
         <tr>
-          <td class="text-center">${rec.co}</td>
-          <td class="text-center">${(rec.expected || 0).toFixed(1)}%</td>
-          <td class="text-center">${(rec.actual || 0).toFixed(1)}%</td>
-          <td class="text-center ${rec.actual < rec.expected ? 'negative' : rec.actual > rec.expected ? 'warning' : 'positive'}">${(rec.actual - rec.expected) > 0 ? '+' : ''}${(rec.actual - rec.expected).toFixed(1)}%</td>
-          <td>${rec.suggestion}</td>
+          <td class="text-center">${index + 1}</td>
+          <td>${rec.QuestionData || 'N/A'}</td>
+          <td class="text-center">${rec.marks || 0}</td>
+          <td class="text-center">${rec.co || 'N/A'}</td>
+          <td class="text-center">${rec.extractedVerb || 'N/A'}</td>
+          <td class="text-center">${rec.highestVerb || 'N/A'}</td>
+          <td class="text-center ${rec.qScore === 1 ? 'status-match' : rec.qScore === 2 ? 'status-higher' : 'status-lower'}">
+            ${rec.qScore}
+          </td>
+          <td class="text-center ${rec.remark === 'Matches Expected Blooms Level' ? 'status-match' : rec.remark === 'Higher than Expected Blooms Level' ? 'status-higher' : 'status-lower'}">
+            ${rec.remark || 'No remarks'}
+          </td>
         </tr>
       `).join('');
 
-      // Generate module recommendations
-      const moduleRecommendationRows = moduleRecommendations.map(rec => `
-        <tr>
-          <td class="text-center">${rec.module}</td>
-          <td class="text-center">${(rec.expected || 0).toFixed(1)}%</td>
-          <td class="text-center">${(rec.actual || 0).toFixed(1)}%</td>
-          <td class="text-center ${rec.actual < rec.expected ? 'negative' : 'positive'}">${(rec.actual - rec.expected) > 0 ? '+' : ''}${(rec.actual - rec.expected).toFixed(1)}%</td>
-          <td>${rec.suggestion}</td>
-        </tr>
-      `).join('');
+      // Generate table rows for CO recommendations
+      const coRecommendationRows = coRecommendations.map(rec => {
+        const variance = (rec.actual || 0) - (rec.expected || 0);
+        return `
+          <tr>
+            <td class="text-center">${rec.co}</td>
+            <td class="text-center">${(rec.expected || 0).toFixed(1)}%</td>
+            <td class="text-center">${(rec.actual || 0).toFixed(1)}%</td>
+            <td class="text-center ${variance < 0 ? 'negative' : 'positive'}">
+              ${variance > 0 ? '+' : ''}${variance.toFixed(1)}%
+            </td>
+            <td>${rec.suggestion}</td>
+          </tr>
+        `;
+      }).join('');
 
-      // Calculate statistics
-      const totalQuestions = questionRecommendations.length;
-      const matchingQuestions = questionRecommendations.filter(q => q.remark === 'Matches Expected Blooms Level').length;
-      const higherQuestions = questionRecommendations.filter(q => q.remark === 'Higher than Expected Blooms Level').length;
-      const lowerQuestions = questionRecommendations.filter(q => q.remark === 'Lower than Expected Blooms Level').length;
-      const matchPercentage = totalQuestions > 0 ? (matchingQuestions / totalQuestions * 100).toFixed(1) : 0;
+      // Generate table rows for module recommendations
+      const moduleRecommendationRows = moduleRecommendations.map(rec => {
+        const variance = (rec.actual || 0) - (rec.expected || 0);
+        return `
+          <tr>
+            <td class="text-center">${rec.module}</td>
+            <td class="text-center">${(rec.expected || 0).toFixed(1)}%</td>
+            <td class="text-center">${(rec.actual || 0).toFixed(1)}%</td>
+            <td class="text-center ${variance < 0 ? 'negative' : 'positive'}">
+              ${variance > 0 ? '+' : ''}${variance.toFixed(1)}%
+            </td>
+            <td>${rec.suggestion}</td>
+          </tr>
+        `;
+      }).join('');
 
-      const htmlContent = `
+        const htmlContent = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -447,18 +457,6 @@ const ResultPage = () => {
                 
                 @media print {
                     body {
-                        padding: 30px;
-                    }
-                    
-                    .section {
-                        page-break-inside: avoid;
-                    }
-                    
-                    table {
-                        page-break-inside: avoid;
-                    }
-                            @media print {
-                    body {
                         padding: 20px;
                     }
                     
@@ -508,14 +506,13 @@ const ResultPage = () => {
                         margin: 20px 0;
                         page-break-after: avoid;
                     }
-                    
                 }
             </style>
         </head>
         <body>
             <div class="report-container">
                 <div class="header">
-                    <h1>Quesiton Paper Assessment Analysis Report</h1>
+                    <h1>Question Paper Assessment Analysis Report</h1>
                     <div class="header-subtitle">Course Outcome & Cognitive Level Evaluation</div>
                     <div class="header-meta">
                         <span>Generated ${new Date().toLocaleDateString('en-US', {
@@ -736,8 +733,7 @@ const ResultPage = () => {
                 </div>
                 <div class="divider"></div>
                       
-                 <!-- Recommendations -
-                 <!-- Question Recommendations -->
+                <!-- Question Recommendations -->
                 <div class="section">
                     <div class="section-title">Question Recommendations</div>
                     <table>
@@ -765,8 +761,7 @@ const ResultPage = () => {
                 <div class="divider"></div>
                 <div class="section">
                     <div class="section-title">Course Outcome Recommendations</div>
-                    <table style=
-                    " width: 100%; table-layout: fixed;" >
+                    <table style="width: 100%; table-layout: fixed;">
                         <thead>
                             <tr>
                                 <th class="text-center">CO</th>
@@ -786,8 +781,7 @@ const ResultPage = () => {
                 ${moduleRecommendations.length > 0 ? `
                 <div class="section">
                     <div class="section-title">Module Recommendations</div>
-                    <table style=
-                    " width: 100%; table-layout: fixed;" >
+                    <table style="width: 100%; table-layout: fixed;">
                         <thead>
                             <tr>
                                 <th class="text-center">Module</th>
@@ -846,6 +840,7 @@ const ResultPage = () => {
         </html>
       `;
 
+
       printWindow.document.write(htmlContent);
       printWindow.document.close();
 
@@ -867,10 +862,10 @@ const ResultPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading analysis data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-900 font-medium">Loading analysis data...</p>
         </div>
       </div>
     );
@@ -878,20 +873,19 @@ const ResultPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-md w-full mx-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-md w-full">
           <div className="flex items-center justify-center mb-4">
             <AlertCircle className="h-12 w-12 text-red-500" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 text-center mb-2">
-            Unable to Load Report
-          </h2>
-          <p className="text-gray-600 text-center mb-4">
-            {error}
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900 text-center mb-2">Unable to Load Report</h2>
+          <p className="text-gray-900 text-center mb-4">{error}</p>
           <button
-            onClick={fetchData}
-            className="w-full bg-gray-900 text-white py-2 px-4 rounded hover:bg-gray-800 transition-colors"
+            onClick={() => {
+              const authToken = sessionStorage.getItem('accessToken');
+              if (authToken) fetchData(authToken);
+            }}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
           >
             Try Again
           </button>
@@ -902,17 +896,13 @@ const ResultPage = () => {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-md w-full mx-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-md w-full">
           <div className="flex items-center justify-center mb-4">
             <AlertCircle className="h-12 w-12 text-gray-500" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 text-center mb-2">
-            No Data Available
-          </h2>
-          <p className="text-gray-600 text-center">
-            No analysis data found.
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900 text-center mb-2">No Data Available</h2>
+          <p className="text-gray-900 text-center">No analysis data found.</p>
         </div>
       </div>
     );
@@ -920,45 +910,432 @@ const ResultPage = () => {
 
   const collectedData = data['Collected Data']?.[0];
   const finalScore = collectedData?.FinalScore || 0;
+  const questionData = collectedData?.QuestionData || [];
+  const bloomsData = collectedData?.BloomsData || {};
+  const moduleData = collectedData?.ModuleData || [];
+  const coData = collectedData?.COData || {};
+  const sequence = data?.Sequence || [];
+  const blommLevelMap = data?.blommLevelMap || {};
+  const questionRecommendations = collectedData?.QuestionRecommendations || [];
+  const coRecommendations = collectedData?.CORecommendations || [];
+  const moduleRecommendations = collectedData?.ModuleRecommendations || [];
+
+  const totalQuestions = questionRecommendations.length;
+  const matchingQuestions = questionRecommendations.filter(q => q.remark === 'Matches Expected Blooms Level').length;
+  const higherQuestions = questionRecommendations.filter(q => q.remark === 'Higher than Expected Blooms Level').length;
+  const lowerQuestions = questionRecommendations.filter(q => q.remark === 'Lower than Expected Blooms Level').length;
+  const matchPercentage = totalQuestions > 0 ? (matchingQuestions / totalQuestions * 100).toFixed(1) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white p-12 rounded-lg shadow-sm border border-gray-200 max-w-md w-full mx-4">
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-6">
-            <CheckCircle className="h-16 w-16 text-gray-900" />
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header with Download Button */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-center md:text-left">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Assessment Analysis Report</h1>
+              <p className="text-gray-900">Course Outcome & Cognitive Level Evaluation</p>
+            </div>
+            <button
+              onClick={downloadPDF}
+              disabled={isDownloading}
+              className="flex items-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
+            >
+              <Download className="h-5 w-5" />
+              {isDownloading ? 'Generating...' : 'Download PDF'}
+            </button>
           </div>
-          
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Analysis Complete
-          </h1>
-          
-          <p className="text-gray-600 mb-8">
-            Your educational data analysis has been processed successfully.
-          </p>
+        </div>
 
-          <div className="bg-gray-50 border border-gray-200 p-6 rounded mb-8">
+        {/* Final Score Card */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-sm border border-blue-200 p-8 mb-6">
+          <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <FileText className="h-5 w-5 text-gray-900" />
-              <span className="font-medium text-gray-900">Final Score</span>
+              <CheckCircle className="h-6 w-6 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Overall Assessment Score</h2>
             </div>
-            <div className="text-4xl font-light text-gray-900">
-              {finalScore.toFixed(1)}%
+            <div className="text-6xl font-bold text-blue-600 mb-2">{finalScore.toFixed(1)}%</div>
+            <p className="text-gray-900">Based on alignment, distribution, and taxonomy analysis</p>
+          </div>
+        </div>
+
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+            <div className="text-4xl font-bold text-gray-900 mb-2">{totalQuestions}</div>
+            <div className="text-sm text-gray-900 uppercase tracking-wide font-medium">Total Questions</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+            <div className="text-4xl font-bold text-green-600 mb-2">{matchingQuestions}</div>
+            <div className="text-sm text-gray-900 uppercase tracking-wide font-medium">Aligned Questions</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+            <div className="text-4xl font-bold text-blue-600 mb-2">{higherQuestions}</div>
+            <div className="text-sm text-gray-900 uppercase tracking-wide font-medium">Higher Level</div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+            <div className="text-4xl font-bold text-red-600 mb-2">{lowerQuestions}</div>
+            <div className="text-sm text-gray-900 uppercase tracking-wide font-medium">Lower Level</div>
+          </div>
+        </div>
+
+        {/* Course Information */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Course Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="border-b border-gray-200 pb-2">
+              <div className="text-xs text-gray-700 uppercase tracking-wide mb-1 font-medium">Institution</div>
+              <div className="text-sm font-medium text-gray-900">{data['College Name'] || 'N/A'}</div>
+            </div>
+            <div className="border-b border-gray-200 pb-2">
+              <div className="text-xs text-gray-700 uppercase tracking-wide mb-1 font-medium">Department</div>
+              <div className="text-sm font-medium text-gray-900">{data['Branch'] || 'N/A'}</div>
+            </div>
+            <div className="border-b border-gray-200 pb-2">
+              <div className="text-xs text-gray-700 uppercase tracking-wide mb-1 font-medium">Course</div>
+              <div className="text-sm font-medium text-gray-900">{data['Course Name'] || 'N/A'}</div>
+            </div>
+            <div className="border-b border-gray-200 pb-2">
+              <div className="text-xs text-gray-700 uppercase tracking-wide mb-1 font-medium">Code</div>
+              <div className="text-sm font-medium text-gray-900">{data['Course Code'] || 'N/A'}</div>
+            </div>
+            <div className="border-b border-gray-200 pb-2">
+              <div className="text-xs text-gray-700 uppercase tracking-wide mb-1 font-medium">Instructor</div>
+              <div className="text-sm font-medium text-gray-900">{data['Course Teacher'] || 'N/A'}</div>
+            </div>
+            <div className="border-b border-gray-200 pb-2">
+              <div className="text-xs text-gray-700 uppercase tracking-wide mb-1 font-medium">Academic Period</div>
+              <div className="text-sm font-medium text-gray-900">Year {data['Year Of Study'] || 'N/A'}, Sem {data['Semester'] || 'N/A'}</div>
             </div>
           </div>
+        </div>
 
-          <button
-            onClick={downloadPDF}
-            disabled={isDownloading}
-            className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white py-3 px-6 rounded hover:bg-gray-800 disabled:bg-gray-400 transition-colors font-medium"
-          >
-            <Download className="h-5 w-5" />
-            {isDownloading ? 'Generating Report...' : 'Download Full Report'}
-          </button>
+        {/* Course Outcomes Configuration */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Course Outcomes Configuration</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Outcome</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Weight</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Target Level</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {Object.keys(sequence[0]?.COs || {}).map(co => {
+                  const coDataItem = sequence[0].COs[co];
+                  return (
+                    <tr key={co} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-center text-gray-900 font-medium">{co}</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{coDataItem.weight || 0}%</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{coDataItem.blooms?.[0] || 'N/A'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-          <p className="text-sm text-gray-500 mt-4">
-            Complete analysis with recommendations and detailed breakdowns
-          </p>
+        {/* Module Distribution */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Module Distribution</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Module</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Hours</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {Object.keys(sequence[0]?.ModuleHours || {}).map(module => {
+                  const hours = sequence[0].ModuleHours[module];
+                  return (
+                    <tr key={module} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-center text-gray-900 font-medium">{module}</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{hours || 0}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Bloom's Taxonomy Mapping */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Bloom's Taxonomy Mapping</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Cognitive Level</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {Object.keys(blommLevelMap).map(level => (
+                  <tr key={level} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-900 font-medium">{level}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{blommLevelMap[level]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Question Analysis */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Detailed Question-wise Analysis ({questionData.length} questions)</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">#</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Question</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Marks</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">CO</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Module</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Level</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {questionData.map((q, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-900">{i + 1}</td>
+                    <td className="px-4 py-3 text-gray-900">{q.Question || 'N/A'}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{q.Marks || 0}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{q.CO || 'N/A'}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{q.Module || 'N/A'}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{q['Bloom\'s Taxonomy Level'] || 'N/A'}</td>
+                    <td className={`px-4 py-3 text-center font-medium ${
+                      q.Remark === 'Matches Expected Blooms Level' ? 'text-green-600' :
+                      q.Remark === 'Higher than Expected Blooms Level' ? 'text-blue-600' : 'text-red-600'
+                    }`}>
+                      {q.Remark || 'N/A'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Blooms Taxonomy Analysis */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Bloom's Taxonomy Analysis</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Level</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">#</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Expected</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Actual</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Variance</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Questions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {Object.keys(bloomsData).map(level => {
+                  const bloomData = bloomsData[level];
+                  const variance = (bloomData.marks || 0) - (bloomData.weights || 0);
+                  return (
+                    <tr key={level} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-900 font-medium">{bloomData.name || `Level ${level}`}</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{bloomData.level}</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{(bloomData.weights || 0).toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{(bloomData.marks || 0).toFixed(1)}%</td>
+                      <td className={`px-4 py-3 text-center font-medium ${variance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {variance > 0 ? '+' : ''}{variance.toFixed(1)}%
+                      </td>
+                      <td className="px-4 py-3 text-center text-gray-900">{bloomData.No_Of_Questions || 0}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Module Coverage Analysis */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Module Coverage Analysis</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Module</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Expected</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Actual</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Variance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {moduleData.map((module, index) => {
+                  const variance = (module.actual || 0) - (module.expected || 0);
+                  return (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-center text-gray-900 font-medium">Module {index + 1}</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{(module.expected || 0).toFixed(1)}%</td>
+                      <td className="px-4 py-3 text-center text-gray-900">{(module.actual || 0).toFixed(1)}%</td>
+                      <td className={`px-4 py-3 text-center font-medium ${variance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {variance > 0 ? '+' : ''}{variance.toFixed(1)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* CO Coverage */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Course Outcome Coverage</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Outcome</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Coverage</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {Object.keys(coData).map(co => (
+                  <tr key={co} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-center text-gray-900 font-medium">CO{co}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{(coData[co] || 0).toFixed(1)}%</td>
+                    <td className="px-4 py-3 text-center text-green-600 font-medium">Complete</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Question Recommendations */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Question Recommendations</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">#</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-900">Question</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Marks</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">CO</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Extracted Verb</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Highest Verb</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Q-Score</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900">Remark</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {questionRecommendations.map((rec, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-center text-gray-900">{index + 1}</td>
+                    <td className="px-4 py-3 text-gray-900">{rec.QuestionData || 'N/A'}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{rec.marks || 0}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{rec.co || 'N/A'}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{rec.extractedVerb || 'N/A'}</td>
+                    <td className="px-4 py-3 text-center text-gray-900">{rec.highestVerb || 'N/A'}</td>
+                    <td className={`px-4 py-3 text-center font-medium ${
+                      rec.qScore === 1 ? 'text-green-600' : rec.qScore === 2 ? 'text-blue-600' : 'text-red-600'
+                    }`}>
+                      {rec.qScore}
+                    </td>
+                    <td className={`px-4 py-3 text-center font-medium ${
+                      rec.remark === 'Matches Expected Blooms Level' ? 'text-green-600' :
+                      rec.remark === 'Higher than Expected Blooms Level' ? 'text-blue-600' : 'text-red-600'
+                    }`}>
+                      {rec.remark || 'No remarks'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Recommendations */}
+        {(coRecommendations.length > 0 || moduleRecommendations.length > 0) && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Recommendations</h2>
+            <div className="space-y-4">
+              {coRecommendations.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Course Outcome Recommendations</h3>
+                  <div className="space-y-2">
+                    {coRecommendations.map((rec, i) => (
+                      <div key={i} className="bg-amber-50 border border-amber-200 rounded p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-medium text-gray-900">{rec.co}</span>
+                          <span className={`text-sm font-medium ${rec.actual < rec.expected ? 'text-red-600' : 'text-green-600'}`}>
+                            {(rec.actual - rec.expected).toFixed(1)}% variance
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-900">{rec.suggestion}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {moduleRecommendations.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Module Recommendations</h3>
+                  <div className="space-y-2">
+                    {moduleRecommendations.map((rec, i) => (
+                      <div key={i} className="bg-blue-50 border border-blue-200 rounded p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-medium text-gray-900">{rec.module}</span>
+                          <span className={`text-sm font-medium ${rec.actual < rec.expected ? 'text-red-600' : 'text-green-600'}`}>
+                            {(rec.actual - rec.expected).toFixed(1)}% variance
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-900">{rec.suggestion}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Performance Analysis */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Performance Analysis</h2>
+          <div className="space-y-4">
+            <div className="bg-gray-50 border-l-4 border-gray-900 p-4">
+              <h3 className="font-semibold text-gray-900 mb-2">Assessment Quality</h3>
+              <p className="text-sm text-gray-900">
+                {finalScore >= 80 
+                  ? 'The assessment demonstrates strong alignment with learning objectives and cognitive levels.'
+                  : finalScore >= 60 
+                  ? 'The assessment shows reasonable alignment with room for improvement in question design and distribution.'
+                  : 'Significant adjustments are required to align with expected standards and cognitive level distribution.'}
+              </p>
+            </div>
+            <div className="bg-gray-50 border-l-4 border-gray-900 p-4">
+              <h3 className="font-semibold text-gray-900 mb-2">Alignment Status</h3>
+              <p className="text-sm text-gray-900">
+                {matchPercentage}% of questions match their expected Bloom's taxonomy levels, with {higherQuestions} questions 
+                at higher cognitive levels and {lowerQuestions} below target. {
+                  matchPercentage >= 80 
+                    ? 'This indicates strong cognitive level alignment across the assessment.'
+                    : matchPercentage >= 60
+                    ? 'Consider reviewing questions that fall below expected cognitive levels.'
+                    : 'A substantial revision of question design is recommended to improve alignment.'
+                }
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

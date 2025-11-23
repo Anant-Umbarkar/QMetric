@@ -124,7 +124,8 @@ const Navbar = () => {
     }
 
     try {
-       const apiUrl = isRegisterMode ? 'https://qmetric-2.onrender.com/auth/create-account' : 'https://qmetric-2.onrender.com/auth/login';
+      //  const apiUrl = isRegisterMode ? 'https://qmetric-2.onrender.com/auth/create-account' : 'https://qmetric-2.onrender.com/auth/login';
+        const apiUrl = isRegisterMode ? 'http://localhost:80/auth/create-account' : 'http://localhost:80/auth/login';
     
     const requestBody = isRegisterMode 
       ? {
@@ -196,7 +197,7 @@ const Navbar = () => {
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-                EduMetric
+                QMetric
               </span>
             </div>
             

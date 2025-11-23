@@ -11,7 +11,7 @@ const Footer = () => {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold text-gray-800">EduMetric</span>
+              <span className="text-lg font-bold text-gray-800">QMetric</span>
             </div>
             <p className="text-gray-600 text-sm">
               Ensuring academic excellence through systematic question paper quality analysis for engineering education.
@@ -43,7 +43,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="border-t border-gray-200 mt-8 pt-8 text-center text-gray-500 text-sm">
-          © 2025 QualityCheck - Automated Question Paper Quality Analysis System. All rights reserved.
+          © 2025 QMetric - Automated Question Paper Quality Analysis System. All rights reserved.
         </div>
       </div>
     </footer>
