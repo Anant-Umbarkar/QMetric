@@ -298,6 +298,29 @@ const ResultPage = () => {
                     color: #1a1a1a;
                     font-weight: 500;
                 }
+                  body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #1a1a1a;
+                    background: #ffffff;
+                    padding: 40px 60px;
+                    font-size: 11pt;
+                    position: relative;
+                }
+                
+                body::before {
+                    content: 'QMetric';
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%) rotate(-45deg);
+                    font-size: 120pt;
+                    font-weight: 700;
+                    color: rgba(0, 0, 0, 0.03);
+                    z-index: -1;
+                    white-space: nowrap;
+                    pointer-events: none;
+                }
                 
                 table {
                     width: 100%;
