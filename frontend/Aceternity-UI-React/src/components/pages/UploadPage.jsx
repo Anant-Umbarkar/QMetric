@@ -519,11 +519,11 @@ const UploadPage = () => {
                         >
                           <option value="">Select Level</option>
                           <option value="Knowledge">Knowledge</option>
-                          <option value="Comprehension">Comprehension</option>
+                          <option value="Understand">Understand</option>
                           <option value="Apply">Apply</option>
                           <option value="Analyze">Analyze</option>
                           <option value="Evaluate">Evaluate</option>
-                          <option value="Synthesis">Synthesis</option>
+                          <option value="Create">Create</option>
                         </select>
                       </div>
                     </div>
