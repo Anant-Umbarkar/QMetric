@@ -59,7 +59,7 @@ const ResultPage = () => {
 
   const openAppendix = async () => {
   const link = document.createElement('a');
-  link.href = '/apend.pdf'; // Path to your PDF in the public folder
+  link.href = '/Appendix_QMetric.pdf'; // Path to your PDF in the public folder
   link.download = `Assessment_Appendix_${new Date().toISOString().split('T')[0]}.pdf`;
   document.body.appendChild(link);
   link.click();
