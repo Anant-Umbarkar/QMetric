@@ -229,8 +229,8 @@ const UploadPage = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://localhost:80/upload/totext', {
-      //const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
+      // const response = await fetch('http://localhost:80/upload/totext', {
+      const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
         method: 'POST',
         headers,
         body: formDataToSend
@@ -518,7 +518,7 @@ const UploadPage = () => {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 text-black bg-white"
                         >
                           <option value="">Select Level</option>
-                          <option value="Knowledge">Knowledge</option>
+                          <option value="Remember">Remember</option>
                           <option value="Understand">Understand</option>
                           <option value="Apply">Apply</option>
                           <option value="Analyze">Analyze</option>

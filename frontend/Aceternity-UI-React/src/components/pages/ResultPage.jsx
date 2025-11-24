@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Download, CheckCircle } from 'lucide-react';
+import { AlertCircle, Download, CheckCircle, BookOpen } from 'lucide-react';
+
 
 const ResultPage = () => {
   const [data, setData] = useState(null);
@@ -22,7 +23,9 @@ const ResultPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:80/upload/totext', {
+      // const response = await fetch('http://localhost:80/upload/totext', {
+      const response = await fetch('https://qmetric-2.onrender.com/upload/totext', {
+        method: 'POST',
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -53,6 +56,15 @@ const ResultPage = () => {
       setLoading(false);
     }
   };
+
+  const openAppendix = async () => {
+  const link = document.createElement('a');
+  link.href = '/apend.pdf'; // Path to your PDF in the public folder
+  link.download = `Assessment_Appendix_${new Date().toISOString().split('T')[0]}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
   const downloadPDF = async () => {
     try {
@@ -204,6 +216,7 @@ const ResultPage = () => {
           </tr>
         `;
       }).join('');
+
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -578,12 +591,46 @@ const ResultPage = () => {
                     </div>
                 </div>
 
-                <!-- Final Score -->
-                <div class="score-section">
-                    <div class="score-label">Overall Assessment Score</div>
-                    <div class="score-value">${finalScore.toFixed(1)}%</div>
-                    <div class="score-description">Based on alignment, distribution, and taxonomy analysis</div>
-                </div>
+               <!-- Final Score -->
+<div class="score-section">
+    <div class="score-label">Overall Assessment Score</div>
+    <div class="score-value">${finalScore.toFixed(1)}%</div>
+    <div class="score-description">Based on alignment, distribution, and taxonomy analysis</div>
+    
+    <!-- Score Remark -->
+    <div style="margin-top: 30px; display: inline-block; padding: 20px 40px; border-radius: 8px; ${
+      finalScore >= 80 
+        ? 'background: #f0fdf4; border: 2px solid #86efac;'
+        : finalScore >= 60 
+        ? 'background: #eff6ff; border: 2px solid #93c5fd;'
+        : finalScore >= 40
+        ? 'background: #fefce8; border: 2px solid #fde047;'
+        : 'background: #fef2f2; border: 2px solid #fca5a5;'
+    }">
+        <div style="font-size: 24pt; font-weight: 700; margin-bottom: 8px; ${
+          finalScore >= 80 
+            ? 'color: #16a34a;'
+            : finalScore >= 60 
+            ? 'color: #2563eb;'
+            : finalScore >= 40
+            ? 'color: #ca8a04;'
+            : 'color: #dc2626;'
+        }">
+            ${finalScore >= 80 ? 'Excellent' : finalScore >= 60 ? 'Good' : finalScore >= 40 ? 'Moderate' : 'Poor'}
+        </div>
+        <div style="font-size: 10pt; color: #4b5563; max-width: 600px;">
+            ${
+              finalScore >= 80 
+                ? 'Strong alignment and balanced distribution. Minor refinements may enhance quality further.'
+                : finalScore >= 60 
+                ? 'Reasonable alignment with some areas needing attention. Review under-represented modules/COs.'
+                : finalScore >= 40
+                ? 'Significant improvements needed. Revise question cognitive levels and balance distribution.'
+                : 'Comprehensive restructuring required. Major misalignment in cognitive levels and/or distribution.'
+            }
+        </div>
+    </div>
+</div>
 
                 <!-- Key Metrics -->
                 <div class="section">
@@ -949,7 +996,47 @@ const ResultPage = () => {
   const lowerQuestions = questionRecommendations.filter(q => q.remark === 'Lower than Expected Blooms Level').length;
   const matchPercentage = totalQuestions > 0 ? (matchingQuestions / totalQuestions * 100).toFixed(1) : 0;
 
-  return (
+ // Add this RIGHT BEFORE: return (
+const getScoreRemark = (score) => {
+  if (score >= 80) {
+    return {
+      label: 'Excellent',
+      description: 'Strong alignment and balanced distribution. Minor refinements may enhance quality further.',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200'
+    };
+  } else if (score >= 60) {
+    return {
+      label: 'Good',
+      description: 'Reasonable alignment with some areas needing attention. Review under-represented modules/COs.',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200'
+    };
+  } else if (score >= 40) {
+    return {
+      label: 'Moderate',
+      description: 'Significant improvements needed. Revise question cognitive levels and balance distribution.',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-200'
+    };
+  } else {
+    return {
+      label: 'Poor',
+      description: 'Comprehensive restructuring required. Major misalignment in cognitive levels and/or distribution.',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200'
+    };
+  }
+};
+
+const scoreRemark = getScoreRemark(finalScore);
+
+return (
+    
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header with Download Button */}
@@ -959,28 +1046,47 @@ const ResultPage = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Assessment Analysis Report</h1>
               <p className="text-gray-900">Course Outcome & Cognitive Level Evaluation</p>
             </div>
-            <button
-              onClick={downloadPDF}
-              disabled={isDownloading}
-              className="flex items-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
-            >
-              <Download className="h-5 w-5" />
-              {isDownloading ? 'Generating...' : 'Download PDF'}
-            </button>
+         <div className="flex flex-col md:flex-row gap-3">
+  <button
+    onClick={openAppendix}
+    className="flex items-center justify-center gap-2 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-700 transition-colors font-medium"
+  >
+    <BookOpen className="h-5 w-5" />
+    View Appendix
+  </button>
+  <button
+    onClick={downloadPDF}
+    disabled={isDownloading}
+    className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
+  >
+    <Download className="h-5 w-5" />
+    {isDownloading ? 'Generating...' : 'Download PDF'}
+  </button>
+</div>
           </div>
         </div>
 
-        {/* Final Score Card */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-sm border border-blue-200 p-8 mb-6">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <CheckCircle className="h-6 w-6 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Overall Assessment Score</h2>
-            </div>
-            <div className="text-6xl font-bold text-blue-600 mb-2">{finalScore.toFixed(1)}%</div>
-            <p className="text-gray-900">Based on alignment, distribution, and taxonomy analysis</p>
-          </div>
-        </div>
+{/* Final Score Card */}
+<div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-sm border border-blue-200 p-8 mb-6">
+  <div className="text-center">
+    <div className="flex items-center justify-center gap-2 mb-2">
+      <CheckCircle className="h-6 w-6 text-blue-600" />
+      <h2 className="text-lg font-semibold text-gray-900">Overall Assessment Score</h2>
+    </div>
+    <div className="text-6xl font-bold text-blue-600 mb-2">{finalScore.toFixed(1)}%</div>
+    <p className="text-gray-900 mb-4">Based on alignment, distribution, and taxonomy analysis</p>
+    
+    {/* Score Remark */}
+    <div className={`inline-block ${scoreRemark.bgColor} ${scoreRemark.borderColor} border-2 rounded-lg px-6 py-3 mt-2`}>
+      <div className={`text-2xl font-bold ${scoreRemark.color} mb-1`}>
+        {scoreRemark.label}
+      </div>
+      <div className="text-sm text-gray-700 max-w-2xl">
+        {scoreRemark.description}
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

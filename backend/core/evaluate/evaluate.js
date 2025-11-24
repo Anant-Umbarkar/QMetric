@@ -239,6 +239,7 @@
 const { generateCORecommendations } = require("../recommendation/coWeightageRecommendation");
 const { generateModuleRecommendations } = require("../recommendation/moduleWeightageRecommendation");
 
+
 // Normalize sequence data to ensure the sum of all weights is 100
 function Normalize(seqData) {
     let sum = seqData.reduce((acc, item) => acc + (+item.M), 0);

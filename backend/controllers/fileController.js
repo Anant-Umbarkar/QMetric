@@ -91,7 +91,7 @@ const saveToDB = async ( userId,Sequence, FormData, filePath) => {
         });
 
         // Step 3: Define all 6 Bloom levels in standard order
-const allBloomLevels = ['knowledge', 'comprehension', 'apply', 'analyze', 'evaluate', 'synthesis'];
+const allBloomLevels = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
 const bloomLevelMap = {};
 
 // Step 4: Collect unique Bloom levels used in COs
