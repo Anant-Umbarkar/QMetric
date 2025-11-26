@@ -325,7 +325,7 @@ exports.FindBloomLevelsInText = (text, bloomLevelMap) => {
     const words = text.split(/\W+/);
     const wordResult = [];
     const levelResult = [];
-    let highestLevel = 0;
+    let highestLevel = 7;
     let highestVerb = null;
 
     for (const word of words) {
@@ -337,7 +337,7 @@ exports.FindBloomLevelsInText = (text, bloomLevelMap) => {
             wordResult.push(word);
             levelResult.push(levelIndex);
             
-            if(levelIndex > highestLevel){
+            if(levelIndex < highestLevel){
                 highestLevel = levelIndex;
                 highestVerb = word;
             }
