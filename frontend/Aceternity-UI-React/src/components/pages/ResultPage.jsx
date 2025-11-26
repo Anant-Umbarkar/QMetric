@@ -1,12 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Download, CheckCircle, BookOpen } from 'lucide-react';
+import BloomsAnalysisChart from './report/BloomAnalysisChart';
+import ModuleAnalysisChart from './report/ModuleAnalysisChart';
+import QuestionDistributionChart from './report/QuestionDistributionChart';
+import COCoverageChart from './report/COCoverageChart';
 
+// Small SVG gauge component for final score
+function polarToCartesian(cx, cy, r, angleDeg) {
+  const angleRad = (angleDeg - 90) * Math.PI / 180.0;
+  return {
+    x: cx + (r * Math.cos(angleRad)),
+    y: cy + (r * Math.sin(angleRad))
+  };
+}
+
+function describeArc(cx, cy, r, startAngle, endAngle) {
+  const start = polarToCartesian(cx, cy, r, endAngle);
+  const end = polarToCartesian(cx, cy, r, startAngle);
+  const largeArcFlag = (endAngle - startAngle) <= 180 ? '0' : '1';
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
+}
+
+const Gauge = ({ value = 0, size = 220 }) => {
+  const v = Math.max(0, Math.min(100, Number(value || 0)));
+  const width = size;
+  const height = Math.round(size / 2) + 20;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = Math.max(10, (size / 2) - 24);
+
+  const endAngle = 180 - (v / 100) * 180; // from 180 (left) to 0 (top)
+  const bgPath = describeArc(cx, cy, r, 180, 0);
+  const fgPath = describeArc(cx, cy, r, 180, endAngle);
+
+  const needlePt = polarToCartesian(cx, cy, r - 6, endAngle);
+
+  const color = v >= 80 ? '#16a34a' : v >= 60 ? '#2563eb' : v >= 40 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="inline-block" aria-hidden="false">
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        {/* background semicircle */}
+        <path d={bgPath} fill="none" stroke="#e6e6e6" strokeWidth="18" strokeLinecap="round" />
+        {/* foreground arc */}
+        <path d={fgPath} fill="none" stroke={color} strokeWidth="18" strokeLinecap="round" />
+
+        {/* needle */}
+        <line x1={cx} y1={cy} x2={needlePt.x} y2={needlePt.y} stroke="#222" strokeWidth="3" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="6" fill="#222" />
+      </svg>
+
+      <div className="mt-2 text-center">
+        <div className="text-4xl font-bold text-blue-600">{v.toFixed(1)}%</div>
+        <div className="text-sm text-gray-700">Overall Assessment Score</div>
+      </div>
+    </div>
+  );
+};
 
 const ResultPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showVisualization, setShowVisualization] = useState(false);
+  const chartsRef = useRef(null);
 
   useEffect(() => {
     const authToken = sessionStorage.getItem('accessToken');
@@ -57,6 +115,25 @@ const ResultPage = () => {
     }
   };
 
+  // Normalize recommendation objects to match report schema
+  const normalizeCoRecommendations = (arr = []) => {
+    return (arr || []).map(r => ({
+      co: r.co ?? r.CO ?? r.Co ?? r.CoId ?? r.coId ?? r.co_name ?? r.coName ?? '',
+      expected: Number(r.expected ?? r.Expected ?? r.target ?? r.targetCoverage ?? 0),
+      actual: Number(r.actual ?? r.Actual ?? r.coverage ?? r.value ?? 0),
+      suggestion: r.suggestion ?? r.Suggestion ?? r.suggest ?? r.s ?? ''
+    }));
+  };
+
+  const normalizeModuleRecommendations = (arr = []) => {
+    return (arr || []).map(r => ({
+      module: r.module ?? r.Module ?? r.moduleName ?? r.ModuleName ?? r.name ?? String(r.module || ''),
+      expected: Number(r.expected ?? r.Expected ?? r.target ?? 0),
+      actual: Number(r.actual ?? r.Actual ?? r.coverage ?? 0),
+      suggestion: r.suggestion ?? r.Suggestion ?? r.suggest ?? ''
+    }));
+  };
+
   const openAppendix = async () => {
   const link = document.createElement('a');
   link.href = '/Appendix_QMetric.pdf'; // Path to your PDF in the public folder
@@ -84,8 +161,11 @@ const ResultPage = () => {
       const finalScore = collectedData?.FinalScore || 0;
       const blommLevelMap = data?.blommLevelMap || {};
       const sequence = data?.Sequence || [];
-      const coRecommendations = collectedData?.CORecommendations || [];
-      const moduleRecommendations = collectedData?.ModuleRecommendations || [];
+      const coRecommendationsRaw = collectedData?.CORecommendations || [];
+      const moduleRecommendationsRaw = collectedData?.ModuleRecommendations || [];
+
+      const coRecommendations = normalizeCoRecommendations(coRecommendationsRaw);
+      const moduleRecommendations = normalizeModuleRecommendations(moduleRecommendationsRaw);
       const questionRecommendations = collectedData?.QuestionRecommendations || [];
 
       const totalQuestions = questionRecommendations.length;
@@ -930,6 +1010,46 @@ const ResultPage = () => {
     }
   };
 
+  const printCharts = () => {
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+      const content = chartsRef.current ? chartsRef.current.innerHTML : '<p>No charts available</p>';
+
+      const html = `
+        <!doctype html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Graphical Report</title>
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; padding: 20px; color: #111 }
+            .chart-container { max-width: 900px; margin: 0 auto; }
+            .chart-wrapper { margin-bottom: 24px; }
+            .gauge { text-align:center; }
+          </style>
+        </head>
+        <body>
+          <h1 style="text-align:center">Graphical Report</h1>
+          <div class="chart-container">${content}</div>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        // printWindow.close();
+      }, 300);
+    } catch (err) {
+      console.error('Print charts failed', err);
+      alert('Printing charts failed');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -987,8 +1107,11 @@ const ResultPage = () => {
   const sequence = data?.Sequence || [];
   const blommLevelMap = data?.blommLevelMap || {};
   const questionRecommendations = collectedData?.QuestionRecommendations || [];
-  const coRecommendations = collectedData?.CORecommendations || [];
-  const moduleRecommendations = collectedData?.ModuleRecommendations || [];
+  const coRecommendationsRaw = collectedData?.CORecommendations || [];
+  const moduleRecommendationsRaw = collectedData?.ModuleRecommendations || [];
+
+  const coRecommendations = normalizeCoRecommendations(coRecommendationsRaw);
+  const moduleRecommendations = normalizeModuleRecommendations(moduleRecommendationsRaw);
 
   const totalQuestions = questionRecommendations.length;
   const matchingQuestions = questionRecommendations.filter(q => q.remark === 'Matches Expected Blooms Level').length;
@@ -1055,13 +1178,21 @@ return (
     View Appendix
   </button>
   <button
-    onClick={downloadPDF}
+          onClick={() => setShowVisualization(true)}
     disabled={isDownloading}
     className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
   >
     <Download className="h-5 w-5" />
-    {isDownloading ? 'Generating...' : 'Download PDF'}
+          Visualize Your Score
   </button>
+        <button
+          onClick={downloadPDF}
+          disabled={isDownloading}
+          className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
+        >
+          <Download className="h-5 w-5" />
+          {isDownloading ? 'Generating...' : 'Download PDF'}
+        </button>
 </div>
           </div>
         </div>
@@ -1073,7 +1204,7 @@ return (
       <CheckCircle className="h-6 w-6 text-blue-600" />
       <h2 className="text-lg font-semibold text-gray-900">Overall Assessment Score</h2>
     </div>
-    <div className="text-6xl font-bold text-blue-600 mb-2">{finalScore.toFixed(1)}%</div>
+    <Gauge value={finalScore} size={220} />
     <p className="text-gray-900 mb-4">Based on alignment, distribution, and taxonomy analysis</p>
     
     {/* Score Remark */}
@@ -1347,6 +1478,38 @@ return (
             </table>
           </div>
         </div>
+        
+        {/* Visualization modal toggle (rendered when user clicks "Visualize Your Score") */}
+        {showVisualization && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-auto p-6 mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">Graphical Report</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={printCharts} className="bg-green-600 text-white px-3 py-1 rounded">Print Charts</button>
+                  <button onClick={() => setShowVisualization(false)} className="bg-gray-200 px-3 py-1 rounded">Close</button>
+                </div>
+              </div>
+
+              <div ref={chartsRef} className="space-y-6">
+                <div className="flex justify-center">
+                  <Gauge value={finalScore} size={240} />
+                </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <BloomsAnalysisChart bloomsData={bloomsData} />
+  <ModuleAnalysisChart moduleData={moduleData} />
+</div>
+
+<div className="mt-6">
+  <COCoverageChart coRecommendations={coRecommendations} coData={coData} />
+</div>
+
+<QuestionDistributionChart questionData={questionData} />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Question Recommendations */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -1396,40 +1559,79 @@ return (
         {(coRecommendations.length > 0 || moduleRecommendations.length > 0) && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Recommendations</h2>
+
+            {/* CO chart removed from UI per request; kept in report components only */}
+
             <div className="space-y-4">
               {coRecommendations.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3">Course Outcome Recommendations</h3>
-                  <div className="space-y-2">
-                    {coRecommendations.map((rec, i) => (
-                      <div key={i} className="bg-amber-50 border border-amber-200 rounded p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-900">{rec.co}</span>
-                          <span className={`text-sm font-medium ${rec.actual < rec.expected ? 'text-red-600' : 'text-green-600'}`}>
-                            {(rec.actual - rec.expected).toFixed(1)}% variance
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-900">{rec.suggestion}</p>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-amber-50 border-b-2 border-amber-200">
+                        <tr>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">CO</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Expected</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Actual</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Variance</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Recommendation</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-amber-100">
+                        {coRecommendations.map((rec, i) => {
+                          const expected = Number(rec.expected || 0);
+                          const actual = Number(rec.actual || 0);
+                          const variance = actual - expected;
+                          return (
+                            <tr key={i} className="hover:bg-amber-50">
+                              <td className="px-4 py-3 text-center text-gray-900 font-medium">{rec.co}</td>
+                              <td className="px-4 py-3 text-center text-gray-900">{expected.toFixed(1)}%</td>
+                              <td className="px-4 py-3 text-center text-gray-900">{actual.toFixed(1)}%</td>
+                              <td className={`px-4 py-3 text-center font-medium ${variance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {variance > 0 ? '+' : ''}{variance.toFixed(1)}%
+                              </td>
+                              <td className="px-4 py-3 text-center text-gray-900">{rec.suggestion || ''}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
               {moduleRecommendations.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3">Module Recommendations</h3>
-                  <div className="space-y-2">
-                    {moduleRecommendations.map((rec, i) => (
-                      <div key={i} className="bg-blue-50 border border-blue-200 rounded p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-medium text-gray-900">{rec.module}</span>
-                          <span className={`text-sm font-medium ${rec.actual < rec.expected ? 'text-red-600' : 'text-green-600'}`}>
-                            {(rec.actual - rec.expected).toFixed(1)}% variance
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-900">{rec.suggestion}</p>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-blue-50 border-b-2 border-blue-200">
+                        <tr>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Module</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Expected</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Actual</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Variance</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-900">Recommendation</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-blue-100">
+                        {moduleRecommendations.map((rec, i) => {
+                          const expected = Number(rec.expected || 0);
+                          const actual = Number(rec.actual || 0);
+                          const variance = actual - expected;
+                          return (
+                            <tr key={i} className="hover:bg-blue-50">
+                              <td className="px-4 py-3 text-center text-gray-900 font-medium">{rec.module}</td>
+                              <td className="px-4 py-3 text-center text-gray-900">{expected.toFixed(1)}%</td>
+                              <td className="px-4 py-3 text-center text-gray-900">{actual.toFixed(1)}%</td>
+                              <td className={`px-4 py-3 text-center font-medium ${variance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {variance > 0 ? '+' : ''}{variance.toFixed(1)}%
+                              </td>
+                              <td className="px-4 py-3 text-center text-gray-900">{rec.suggestion || ''}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
