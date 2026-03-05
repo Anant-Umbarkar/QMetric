@@ -9,6 +9,7 @@ import ResultPage from "./components/pages/ResultPage";
 import "./App.css";
 import "animate.css";
 import UserDashboard from "./components/pages/UserDashboard";
+import CreditsPage from "./components/pages/Creditspage";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/components" element={<Components />} />
           <Route path="/result" element={<ResultPage />} />
           <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/credits" element={<CreditsPage />} />
         </Routes>
         <Footer />
       </div>

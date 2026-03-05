@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FileText, Menu, X, User, Mail, Lock, Eye, EyeOff, Home, BarChart3 } from 'lucide-react';
+import { FileText, Menu, X, User, Mail, Lock, Eye, EyeOff, Home, BarChart3, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AccessRestrictionModal from './AccessRestrictionModal';
 import useAccessRestriction from './hooks/useAccessRestriction';
 
@@ -18,6 +19,8 @@ const Navbar = () => {
     password: '',
     confirmPassword: ''
   });
+
+  const navigate = useNavigate();
 
   // Use the access restriction hook
   const { restrictionModal, closeRestrictionModal, checkAccess } = useAccessRestriction(
@@ -46,20 +49,8 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showUserMenu]);
 
-   const navigateTo = (path) => {
-    // For React Router, you would use:
-    // const navigate = useNavigate();
-    // navigate(path);
-    
-    // For now, simulate navigation
-    console.log(`Navigating to: ${path}`);
-    if (path === '/') {
-      window.location.href = '/';
-    } else if (path === '/') {
-      window.location.href = '/';
-    } else if (path === '/upload') {
-      window.location.href = '/upload';
-    }
+  const navigateTo = (path) => {
+    navigate(path);
   };
 
   // Feature access handler
@@ -81,12 +72,9 @@ const Navbar = () => {
 
   // Get user initials
   const getUserInitials = (userName) => {
-    // console.log(userName)
     if (!userName) return 'U';
     const names = userName.split(' ');
-    if (names.length === 1) {
-      return names[0].charAt(0).toUpperCase();
-    }
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
   };
 
@@ -95,20 +83,12 @@ const Navbar = () => {
     sessionStorage.removeItem('user');
     setUser(null);
     setShowUserMenu(false);
-
-    // Dispatch event for other components
     window.dispatchEvent(new Event('authStateChanged'));
-    
-    // Navigate to home
     navigateTo('/');
-
   };
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError('');
   };
 
@@ -124,45 +104,32 @@ const Navbar = () => {
     }
 
     try {
-       const apiUrl = isRegisterMode ? 'https://qmetric-2.onrender.com/auth/create-account' : 'https://qmetric-2.onrender.com/auth/login';
-        // const apiUrl = isRegisterMode ? 'http://localhost:80/auth/create-account' : 'http://localhost:80/auth/login';
-    
-    const requestBody = isRegisterMode 
-      ? {
-          userName: formData.userName,
-          email: formData.email,
-          password: formData.password
-        }
-      : {
-          email: formData.email,
-          password: formData.password
-        };
+      const apiUrl = isRegisterMode
+        ? 'https://qmetric-2.onrender.com/auth/create-account'
+        : 'https://qmetric-2.onrender.com/auth/login';
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
+      const requestBody = isRegisterMode
+        ? { userName: formData.userName, email: formData.email, password: formData.password }
+        : { email: formData.email, password: formData.password };
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Authentication failed');
-    }
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
 
-    const data = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Authentication failed');
+      }
 
+      const data = await response.json();
       sessionStorage.setItem('accessToken', data.accessToken);
       sessionStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
       setIsLoginModalOpen(false);
       setFormData({ userName: '', email: '', password: '', confirmPassword: '' });
-
-       // Dispatch event for other components
       window.dispatchEvent(new Event('authStateChanged'));
-      
-      // Navigate to dashboard after successful login
       navigateTo('/');
     } catch (error) {
       setError('Credentials not matched. Please try again');
@@ -182,14 +149,14 @@ const Navbar = () => {
     setFormData({ userName: '', email: '', password: '', confirmPassword: '' });
     setError('');
   };
-  
+
   return (
     <>
       <nav className="relative z-50 bg-gray-900 text-white py-4 px-6 rounded-md shadow-lg">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
-            {/* Logo Section */}
-             <div 
+            {/* Logo */}
+            <div
               className="flex items-center space-x-3 cursor-pointer hover:scale-105 transition-transform"
               onClick={() => navigateTo('/')}
             >
@@ -200,8 +167,8 @@ const Navbar = () => {
                 QMetric
               </span>
             </div>
-            
-             {/* Navigation Links - Desktop */}
+
+            {/* Desktop Nav Links */}
             <div className="hidden md:flex items-center space-x-6">
               <button
                 onClick={() => navigateTo('/')}
@@ -210,29 +177,38 @@ const Navbar = () => {
                 <Home className="w-4 h-4" />
                 <span>Home</span>
               </button>
-              <a 
-                href="#features" 
+              <a
+                href="#features"
                 className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500"
               >
                 Features
               </a>
-              <a 
-                href="#about" 
+              <a
+                href="#about"
                 className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500"
               >
                 About
               </a>
-              <button
-                onClick={() => handleFeatureAccess('Dashboard',false,'/')}
+              {/* <button
+                onClick={() => handleFeatureAccess('Dashboard', false, '/')}
                 className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>Dashboard</span>
                 {!user && <Lock className="w-4 h-4" />}
+              </button> */}
+
+              {/* ── Credits Link ── */}
+              <button
+                onClick={() => navigateTo('/credits')}
+                className="relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
+              >
+                <Users className="w-4 h-4" />
+                <span>Credits</span>
               </button>
             </div>
-            
-            {/* Login Button or User Avatar - Desktop */}
+
+            {/* Login / Avatar - Desktop */}
             <div className="hidden md:block">
               {user ? (
                 <div className="relative user-menu-container">
@@ -242,8 +218,7 @@ const Navbar = () => {
                   >
                     {getUserInitials(user.userName)}
                   </button>
-                  
-                  {/* User Dropdown Menu */}
+
                   {showUserMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50">
                       <div className="px-4 py-3 border-b border-gray-600">
@@ -255,15 +230,19 @@ const Navbar = () => {
                           </span>
                         </div>
                       </div>
-                       <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          navigateTo('/');
-                        }}
+                      {/* <button
+                        onClick={() => { setShowUserMenu(false); navigateTo('/'); }}
                         className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center space-x-2"
                       >
                         <BarChart3 className="w-4 h-4" />
                         <span>Dashboard</span>
+                      </button> */}
+                      <button
+                        onClick={() => { setShowUserMenu(false); navigateTo('/credits'); }}
+                        className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center space-x-2"
+                      >
+                        <Users className="w-4 h-4" />
+                        <span>Credits</span>
                       </button>
                       <button
                         onClick={handleLogout}
@@ -275,7 +254,7 @@ const Navbar = () => {
                   )}
                 </div>
               ) : (
-                <button 
+                <button
                   onClick={() => setIsLoginModalOpen(true)}
                   className="inline-block px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-lg font-semibold text-white rounded-lg shadow-lg hover:scale-105 hover:shadow-xl transition-transform duration-200"
                 >
@@ -283,9 +262,9 @@ const Navbar = () => {
                 </button>
               )}
             </div>
-            
+
             {/* Mobile Menu Button */}
-            <button 
+            <button
               className="md:hidden text-white"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
@@ -293,50 +272,56 @@ const Navbar = () => {
             </button>
           </div>
         </div>
-        
+
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden bg-gray-800 border-t border-gray-700 mt-4 rounded-lg">
             <div className="px-4 py-4 space-y-4">
               <button
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  navigateTo('/');
-                }}
+                onClick={() => { setIsMenuOpen(false); navigateTo('/'); }}
                 className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-2"
               >
                 <Home className="w-4 h-4" />
                 <span>Home</span>
               </button>
-              <a 
-                href="#features" 
+              <a
+                href="#features"
                 className="block relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Features
               </a>
-              <a 
-                href="#about" 
+              <a
+                href="#about"
                 className="block relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500"
                 onClick={() => setIsMenuOpen(false)}
               >
                 About
               </a>
-              <button
-                onClick={() => handleFeatureAccess('Dashboard',false,'/')}
+              {/* <button
+                onClick={() => handleFeatureAccess('Dashboard', false, '/')}
                 className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-1"
               >
                 <BarChart3 className="w-4 h-4" />
                 <span>Dashboard</span>
                 {!user && <Lock className="w-4 h-4" />}
+              </button> */}
+
+              {/* ── Credits Link (Mobile) ── */}
+              <button
+                onClick={() => { setIsMenuOpen(false); navigateTo('/credits'); }}
+                className="w-full text-left relative px-5 py-2 text-lg font-semibold transition-all rounded-lg text-gray-300 hover:text-orange-500 flex items-center space-x-2"
+              >
+                <Users className="w-4 h-4" />
+                <span>Credits</span>
               </button>
-      
+
               {user ? (
                 <div className="space-y-2">
                   <div className="px-4 py-2 border-b border-gray-600">
                     <p className="text-white font-semibold">{user.userName}</p>
                     <p className="text-gray-400 text-sm">{user.email}</p>
-                  <div className="flex items-center space-x-1 mt-1">
+                    <div className="flex items-center space-x-1 mt-1">
                       <span className={`text-xs px-2 py-1 rounded ${user.isPremium ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-gray-300'}`}>
                         {user.isPremium ? 'Premium' : 'Free'}
                       </span>
@@ -350,7 +335,7 @@ const Navbar = () => {
                   </button>
                 </div>
               ) : (
-                <button 
+                <button
                   onClick={() => setIsLoginModalOpen(true)}
                   className="w-full inline-block px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-lg font-semibold text-white rounded-lg shadow-lg hover:scale-105 hover:shadow-xl transition-transform duration-200"
                 >
@@ -373,7 +358,7 @@ const Navbar = () => {
         customMessage={restrictionModal.customMessage}
         customIcon={restrictionModal.customIcon}
       />
-      
+
       {/* Login/Register Modal */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -382,21 +367,17 @@ const Navbar = () => {
               <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
                 {isRegisterMode ? 'Create Account' : 'Welcome Back'}
               </h2>
-              <button 
-                onClick={closeModal}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
+              <button onClick={closeModal} className="text-gray-400 hover:text-white transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
-            {/* Error Message */}
+
             {error && (
               <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
                 <p className="text-red-300 text-sm">{error}</p>
               </div>
             )}
-            
+
             <div className="space-y-4">
               {isRegisterMode && (
                 <div className="relative">
@@ -412,7 +393,7 @@ const Navbar = () => {
                   />
                 </div>
               )}
-              
+
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
@@ -425,7 +406,7 @@ const Navbar = () => {
                   onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
                 />
               </div>
-              
+
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
@@ -445,7 +426,7 @@ const Navbar = () => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              
+
               {isRegisterMode && (
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
@@ -461,7 +442,7 @@ const Navbar = () => {
                   />
                 </div>
               )}
-              
+
               <button
                 type="button"
                 onClick={handleSubmit}
@@ -471,19 +452,16 @@ const Navbar = () => {
                 {isLoading ? 'Processing...' : (isRegisterMode ? 'Create Account' : 'Sign In')}
               </button>
             </div>
-            
+
             <div className="mt-6 text-center">
               <p className="text-gray-400">
                 {isRegisterMode ? 'Already have an account?' : "Don't have an account?"}
-                <button
-                  onClick={toggleMode}
-                  className="ml-2 text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-                >
+                <button onClick={toggleMode} className="ml-2 text-blue-400 hover:text-blue-300 font-semibold transition-colors">
                   {isRegisterMode ? 'Sign In' : 'Sign Up'}
                 </button>
               </p>
             </div>
-            
+
             <div className="mt-4 text-center">
               <p className="text-xs text-gray-500">
                 By continuing, you agree to our Terms of Service and Privacy Policy.
