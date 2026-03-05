@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Upload, FileText, Plus, Check, Target, BookOpen, Loader2, AlertCircle } from 'lucide-react';
+import { Trash2, Upload, FileText, Check, Target, BookOpen, Loader2, AlertCircle } from 'lucide-react';
 
 const UploadPage = () => {
   const [formData, setFormData] = useState({
