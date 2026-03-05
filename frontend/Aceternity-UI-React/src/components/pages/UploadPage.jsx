@@ -86,10 +86,12 @@ const UploadPage = () => {
     setError('');
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleAddCO = () => {
     setCourseOutcomes([...courseOutcomes, { weight: "", blooms: "" }]);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleAddModule = () => {
     setModules([...modules, { name: "", hours: "" }]);
   };
