@@ -81,6 +81,7 @@ export function SignupFormDemo() {
       } else {
         setSuccess("Login successful!");
         console.log("Access Token:", data.accessToken);
+        // Store token in localStorage
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("user", JSON.stringify(data.user));
         
@@ -88,6 +89,7 @@ export function SignupFormDemo() {
         setPassword("");
         setCaptchaInput("");
         setTimeout(() => setSuccess(""), 3000);
+        // Redirect or update app state here
       }
     } catch (err) {
       setError("Error connecting to server");

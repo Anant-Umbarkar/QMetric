@@ -15,8 +15,10 @@ export default function UserDashboard() {
   };
 
   useEffect(() => {
+    // Check user authentication
     const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
+    // Check for authentication token - replace with your auth logic
     if (!token || !userData) {
       setUser({ name: 'Dr. Sarah Johnson', email: 'sarah.johnson@university.edu', role: 'Faculty' });
       fetchMockData();
@@ -31,6 +33,7 @@ export default function UserDashboard() {
     }
   }, []);
 
+  // Fetch actual dashboard data from API
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
@@ -46,17 +49,21 @@ export default function UserDashboard() {
           setStats({ totalPapers: result.data.length });
         }
       } else {
+        // Fallback to mock data if API fails
         fetchMockData();
       }
     } catch {
+      // Fallback to mock data if API fails
       fetchMockData();
     } finally {
       setLoading(false);
     }
   };
 
+  // Mock data for demo purposes
   const fetchMockData = () => {
     setLoading(true);
+    // Simulate API delay
     setTimeout(() => {
       const mockPapers = [
         { _id: '1', 'Course Name': 'Advanced Data Structures', 'Course Code': 'CS301', 'Branch': 'Computer Science', 'Year Of Study': '3rd Year', 'Semester': '5', 'College Name': 'Tech University', createdAt: new Date().toISOString() },

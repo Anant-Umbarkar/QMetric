@@ -7,11 +7,9 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
 
 const fileRouter = require('./routes/file');
 const usersRouter = require('./routes/auth');
-const User = require('./Model/user');
 
 const app = express();
 
@@ -27,43 +25,11 @@ db.on('error', (error) => {
   process.exit(1);
 });
 
-db.once('open', async () => {
+db.once('open', () => {
   console.log('Connected to MongoDB');
 
-  // Seed 5 pre-existing users
-  const seedUsers = async () => {
-    const users = [
-      { userName: 'Test User1', email: 'test@user1.com', password: 'password123' },
-      { userName: 'Test User2', email: 'test@euser2.com', password: 'password123' },
-      { userName: 'Test User3', email: 'test@euser3.com', password: 'password123' },
-      { userName: 'Test User4', email: 'test@user4.com', password: 'password123' },
-      { userName: 'Test User5', email: 'test@user5.com', password: 'password123' },
-    ];
-
-    for (const userData of users) {
-      const existingUser = await User.findOne({ email: userData.email });
-      if (!existingUser) {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(userData.password, salt);
-        
-        const newUser = new User({
-          userName: userData.userName,
-          email: userData.email,
-          password: hashedPassword,
-        });
-
-        await newUser.save();
-        console.log(`User ${userData.email} created`);
-      } else {
-        console.log(`User ${userData.email} already exists`);
-      }
-    }
-  };
-
-  await seedUsers();
-
 app.use(cors({
-  origin: ['https://q-metric-3k72.vercel.app', 'http://localhost:3000', 'http://localhost:3001'], 
+  origin: ['https://q-metric-3k72.vercel.app/', 'http://localhost:3000', 'http://localhost:3001'], 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));  

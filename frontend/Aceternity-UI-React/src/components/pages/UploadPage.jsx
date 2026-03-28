@@ -50,20 +50,31 @@ const UploadPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
+  // Validation function
   const validateForm = () => {
     setError('');
+
+    // Check required fields
     const requiredFields = ["College Name", "Branch", "Course Name", "Course Code"];
     for (let field of requiredFields) {
       if (!formData[field].trim()) { setError(`${field} is required`); return false; }
     }
+
+    // Validate course outcomes
     if (courseOutcomes.length === 0) { setError("At least one course outcome is required"); return false; }
+
+    // Validate course outcomes have required fields
     for (let i = 0; i < courseOutcomes.length; i++) {
       const co = courseOutcomes[i];
       if (!co.weight || parseFloat(co.weight) <= 0) { setError(`Course Outcome ${i + 1} must have a valid weight`); return false; }
       if (!co.blooms) { setError(`Course Outcome ${i + 1} must have a Bloom's level selected`); return false; }
     }
+
+    // Validate weight sum
     const totalWeight = courseOutcomes.reduce((sum, co) => sum + (parseFloat(co.weight) || 0), 0);
     if (Math.abs(totalWeight - 100) > 0.01) { setError(`CO weights must sum to 100%. Current: ${totalWeight.toFixed(1)}%`); return false; }
+
+    // Validate modules
     if (modules.length === 0) { setError("At least one module is required"); return false; }
     for (let i = 0; i < modules.length; i++) {
       const module = modules[i];
@@ -120,11 +131,15 @@ const UploadPage = () => {
     if (!validateForm()) return;
     setIsUploading(true); setError('');
 
+    // Transform course outcomes and modules into backend's expected format
     const transformedSequence = [
+      // Add course outcomes with backend structure
       ...courseOutcomes.map((co, index) => ({ name: `CO${index + 1}`, type: "CO", weight: parseFloat(co.weight), blooms: [co.blooms] })),
+      // Add modules with backend structure
       ...modules.map(module => ({ name: module.name, type: "Module", hours: parseFloat(module.hours) }))
     ];
 
+    // Prepare form data to send to the backend
     const formDataToSend = new FormData();
     formDataToSend.append("file", file);
     formDataToSend.append("FormData", JSON.stringify(formData));
@@ -134,28 +149,59 @@ const UploadPage = () => {
       const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
       if (!token) throw new Error('No authentication token found. Please login first.');
 
+      // const response = await fetch('http://localhost:80/upload/totext', {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/upload/totext`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formDataToSend
       });
 
+      // Check if response is ok first
       if (response.ok) {
         try {
           const responseData = await response.json();
-          const resultId = responseData?.id || responseData?._id || responseData?.result_id || responseData?.data?.id || responseData;
+          // Extract the ID from response - adjust based on your backend's response structure
+          let resultId;
+          if (typeof responseData === 'string') {
+            // If response is directly the ID as string
+            resultId = responseData._id;
+          } else if (responseData.id) {
+            // If response has an id field
+            resultId = responseData._id;
+          } else if (responseData.result_id) {
+            // If response has a result_id field
+            resultId = responseData.result_id;
+          } else if (responseData.data && responseData.data.id) {
+            // If response has nested id
+            resultId = responseData.data.id;
+          } else {
+            // If response is an object, you might need to extract differently
+            resultId = responseData;
+          }
+
           if (resultId) {
+            // Success message
             alert('File uploaded and processed successfully!');
+            // Redirect to result page using native browser navigation
             window.location.href = '/result';
+            // Reset form on success
             setFile(null); setCourseOutcomes([]); setModules([]);
             setFormData({ "College Name": "", "Branch": "", "Year Of Study": "", "Semester": "", "Course Name": "", "Course Code": "", "Course Teacher": "" });
           } else throw new Error('No result ID received from server');
         } catch { setError('Invalid response from server. Please try again.'); }
       } else {
+        // Handle error responses
         try {
           const text = await response.text();
           let msg;
-          try { const d = JSON.parse(text); msg = d.message || d.error || text; } catch { msg = text; }
+          try {
+            // Try to parse as JSON first
+            const d = JSON.parse(text);
+            msg = d.message || d.error || text;
+          } catch {
+            // If not JSON, use the text directly
+            msg = text;
+          }
           if (response.status === 403) setError('Access denied. Please check your authentication or login again.');
           else if (response.status === 401) setError('Authentication required. Please login again.');
           else if (response.status === 413) setError('File too large. Please upload a smaller file.');

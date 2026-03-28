@@ -60,6 +60,7 @@ export default function LandingPage() {
     { value: '100%', label: 'CO Mapping Accuracy' },
   ];
 
+  // Function to check user authentication status
   const checkUserAuth = () => {
     const token = sessionStorage.getItem('accessToken');
     const userData = sessionStorage.getItem('user');
@@ -69,6 +70,7 @@ export default function LandingPage() {
         setUser(parsedUser);
         return parsedUser;
       } catch {
+        // Clear invalid data
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('user');
         setUser(null);
@@ -80,13 +82,17 @@ export default function LandingPage() {
     }
   };
 
+  // Check for existing user session on component mount
   useEffect(() => { checkUserAuth(); }, []);
 
+  // Listen for storage changes (when user logs in/out in another tab/component)
   useEffect(() => {
     const handleStorageChange = (e) => {
+      // Listen for storage events
       if (e.key === 'accessToken' || e.key === 'user') checkUserAuth();
     };
     window.addEventListener('storage', handleStorageChange);
+    // Also listen for a custom event that we can dispatch when login state changes
     window.addEventListener('authStateChanged', checkUserAuth);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -94,8 +100,10 @@ export default function LandingPage() {
     };
   }, []);
 
+  // Alternative: Poll for changes every few seconds (less efficient but more reliable)
   useEffect(() => {
     const interval = setInterval(() => {
+      // Check if auth state has changed
       const currentToken = sessionStorage.getItem('accessToken');
       if ((!currentToken && user) || (currentToken && !user)) checkUserAuth();
     }, 1000);
@@ -110,8 +118,14 @@ export default function LandingPage() {
   }, [features.length]);
 
   const handleAnalyzeClick = () => {
+    // Double-check user state before proceeding
     const currentUser = checkUserAuth();
-    if (!currentUser) { alert('Please log in to access the analyze feature'); return; }
+    if (!currentUser) { 
+      // Handle demo functionality - always accessible
+      alert('Please log in to access the analyze feature'); 
+      return; 
+    }
+    // Navigate to upload page or handle feature access
     navigate('/upload');
   };
 
