@@ -31,6 +31,7 @@ export const TypewriterEffect = ({ words, className, cursorClassName }) => {
         }
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInView]);
 
   const renderWords = () => {

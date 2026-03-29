@@ -9,23 +9,23 @@ import ResultPage from "./components/pages/ResultPage";
 import "./App.css";
 import "animate.css";
 import UserDashboard from "./components/pages/UserDashboard";
-import TeamPage from "./components/pages/TeamPage";
+import CreditsPage from "./components/pages/Creditspage";
 
 function App() {
   return (
-    <div className="bg-black min-h-screen text-white">
-      <Navbar />
-      <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/upload" element={<UploadPage />} />
-        <Route path="/components" element={<Components />} />
-        <Route path="/result" element={<ResultPage />} />
-        <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/team" element={<TeamPage />} />
-      </Routes>
-      <Footer />
-    </div>
+      <div className="bg-black min-h-screen text-white">
+        <Navbar />
+        <ScrollToTop />
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/components" element={<Components />} />
+          <Route path="/result" element={<ResultPage />} />
+          <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/credits" element={<CreditsPage />} />
+        </Routes>
+        <Footer />
+      </div>
   );
 }
 

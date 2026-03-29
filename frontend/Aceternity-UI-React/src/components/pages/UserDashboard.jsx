@@ -31,6 +31,7 @@ export default function UserDashboard() {
         fetchMockData();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch actual dashboard data from API

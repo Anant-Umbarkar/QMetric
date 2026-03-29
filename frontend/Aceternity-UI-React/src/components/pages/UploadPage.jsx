@@ -1,35 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, Upload, FileText, Check, Target, BookOpen, Loader2, AlertCircle } from 'lucide-react';
 
-// Soft-dark input: white background for easy reading, dark text
-const inputClass = `w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400
-  focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all text-sm shadow-sm`;
-
-const labelClass = `block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5`;
-
-const SectionCard = ({ icon, title, subtitle, badge, children }) => (
-  <div className="bg-gray-800 border border-gray-700/60 rounded-2xl overflow-hidden shadow-lg">
-    <div className="px-6 pt-5 pb-4 border-b border-gray-700/50">
-      <div className="flex items-center gap-3">
-        {badge ? (
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg flex-shrink-0">
-            {badge}
-          </div>
-        ) : (
-          <div className="w-8 h-8 rounded-xl bg-gray-700 border border-gray-600 flex items-center justify-center text-blue-400 flex-shrink-0">
-            {icon}
-          </div>
-        )}
-        <div>
-          <h2 className="text-white font-bold text-base">{title}</h2>
-          {subtitle && <p className="text-gray-400 text-xs mt-0.5">{subtitle}</p>}
-        </div>
-      </div>
-    </div>
-    <div className="p-6">{children}</div>
-  </div>
-);
-
 const UploadPage = () => {
   const [formData, setFormData] = useState({
     "College Name": "",
@@ -84,12 +55,20 @@ const UploadPage = () => {
     return true;
   };
 
-  const handleInputChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); setError(''); };
-  const handleCOChange = (index, field, value) => { const u = [...courseOutcomes]; u[index][field] = value; setCourseOutcomes(u); setError(''); };
-  const handleModuleChange = (index, field, value) => { const u = [...modules]; u[index][field] = value; setModules(u); setError(''); };
-  const deleteCO = (index) => setCourseOutcomes(courseOutcomes.filter((_, i) => i !== index));
-  const deleteModule = (index) => setModules(modules.filter((_, i) => i !== index));
-  const getCurrentWeightSum = () => courseOutcomes.reduce((sum, co) => sum + (parseFloat(co.weight) || 0), 0);
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const handleAddCO = () => {
+    setCourseOutcomes([...courseOutcomes, { weight: "", blooms: "" }]);
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const handleAddModule = () => {
+    setModules([...modules, { name: "", hours: "" }]);
+  };
 
   const handleNumCOsChange = (e) => {
     const num = parseInt(e.target.value) || 0;
