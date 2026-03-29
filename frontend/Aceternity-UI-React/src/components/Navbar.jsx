@@ -13,6 +13,9 @@ const Navbar = () => {
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [captcha, setCaptcha] = useState(null);
+  const [captchaId, setCaptchaId] = useState(null);
+  const [captchaInput, setCaptchaInput] = useState('');
   const [formData, setFormData] = useState({
     userName: '',
     email: '',
@@ -36,6 +39,27 @@ const Navbar = () => {
       setUser(JSON.parse(userData));
     }
   }, []);
+
+  // Fetch CAPTCHA when login modal opens
+  React.useEffect(() => {
+    if (isLoginModalOpen && !isRegisterMode) {
+      fetchCaptcha();
+    }
+  }, [isLoginModalOpen, isRegisterMode]);
+
+  const fetchCaptcha = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/captcha`);
+      const data = await response.json();
+      if (!data.error) {
+        setCaptcha(data.captcha);
+        setCaptchaId(data.captchaId);
+        setCaptchaInput('');
+      }
+    } catch (err) {
+      console.error('Error fetching CAPTCHA:', err);
+    }
+  };
 
   // Close user menu when clicking outside
   React.useEffect(() => {
@@ -97,12 +121,6 @@ const Navbar = () => {
     setIsLoading(true);
     setError('');
 
-    if (isRegisterMode && formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const apiUrl = isRegisterMode
         ? 'https://qmetric-2.onrender.com/auth/create-account'
@@ -132,7 +150,11 @@ const Navbar = () => {
       window.dispatchEvent(new Event('authStateChanged'));
       navigateTo('/');
     } catch (error) {
-      setError('Credentials not matched. Please try again');
+      setError(error.message || 'Credentials not matched. Please try again');
+      // Reload CAPTCHA on error
+      if (error.message && error.message.includes('CAPTCHA')) {
+        fetchCaptcha();
+      }
     } finally {
       setIsLoading(false);
     }
